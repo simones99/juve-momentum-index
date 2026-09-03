@@ -1,7 +1,34 @@
-import type { BriefResponse } from "@/lib/types";
+import type { BriefData, BriefResponse } from "@/lib/types";
 import { ResultBadge } from "./ResultBadge";
 
 const TREND_LABELS: Record<string, string> = { up: "in crescita", down: "in calo", flat: "stabile" };
+
+function ProbabilityBar({ data }: { data: BriefData }) {
+  if (data.win_probability === null || data.draw_probability === null || data.loss_probability === null) {
+    return null;
+  }
+  const win = data.win_probability * 100;
+  const draw = data.draw_probability * 100;
+  const loss = data.loss_probability * 100;
+  const opponentLabel = data.opponent ?? "avversario";
+  const title = data.kind === "pre" ? "Probabilità (modello Elo)" : "Probabilità pre-partita (modello Elo)";
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 6 }}>{title}</div>
+      <div style={{ display: "flex", height: 10, borderRadius: 999, overflow: "hidden" }}>
+        <div style={{ width: `${win}%`, background: "var(--win)" }} title={`Juve ${win.toFixed(0)}%`} />
+        <div style={{ width: `${draw}%`, background: "var(--draw)" }} title={`Pareggio ${draw.toFixed(0)}%`} />
+        <div style={{ width: `${loss}%`, background: "var(--loss)" }} title={`${opponentLabel} ${loss.toFixed(0)}%`} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: "0.8rem" }}>
+        <span>Juve {win.toFixed(0)}%</span>
+        <span style={{ color: "var(--text-muted)" }}>Pareggio {draw.toFixed(0)}%</span>
+        <span>{opponentLabel} {loss.toFixed(0)}%</span>
+      </div>
+    </div>
+  );
+}
 
 export function MatchBriefCard({ brief }: { brief: BriefResponse }) {
   const { data } = brief;
@@ -17,6 +44,8 @@ export function MatchBriefCard({ brief }: { brief: BriefResponse }) {
           {brief.llm_used ? "AI-enhanced" : "Template"}
         </span>
       </div>
+
+      <ProbabilityBar data={data} />
 
       <div className="brief-text">
         {brief.display_text.map((line, i) => (

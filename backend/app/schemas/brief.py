@@ -16,6 +16,9 @@ class BriefData(BaseModel):
     elo_before: float | None = None
     elo_after: float | None = None
     head_to_head_recent: str | None = None
+    win_probability: float | None = None  # P(Juventus win), Elo-based heuristic
+    draw_probability: float | None = None
+    loss_probability: float | None = None  # P(Juventus loss)
 
 
 class BriefResponse(BaseModel):

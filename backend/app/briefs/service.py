@@ -42,8 +42,10 @@ def _to_response(data: BriefData, template_lines: list[str]) -> BriefResponse:
     )
 
 
-def get_pre_match_brief(db: Session, opponent: str | None, n: int = 5) -> BriefResponse:
-    data = build_pre_match_brief_data(db, opponent, n)
+def get_pre_match_brief(
+    db: Session, opponent: str | None, n: int = 5, is_home: bool = True
+) -> BriefResponse:
+    data = build_pre_match_brief_data(db, opponent, n, is_home)
     return _to_response(data, render_template_text(data))
 
 

@@ -68,6 +68,9 @@ export interface BriefData {
   elo_before: number | null;
   elo_after: number | null;
   head_to_head_recent: string | null;
+  win_probability: number | null;
+  draw_probability: number | null;
+  loss_probability: number | null;
 }
 
 export interface BriefResponse {

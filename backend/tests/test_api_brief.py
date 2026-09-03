@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.briefs import service as brief_service
 from app.briefs.openrouter_client import OpenRouterClient, OpenRouterError
 from app.config import Settings
@@ -70,6 +72,9 @@ def test_match_brief_post_match_defaults_to_template_without_api_key(client, db)
     assert body["llm_error"] is None
     assert body["display_text"] == body["template_text"]
     assert body["data"]["result"] == "W"
+    assert body["data"]["win_probability"] is not None
+    total = body["data"]["win_probability"] + body["data"]["draw_probability"] + body["data"]["loss_probability"]
+    assert total == pytest.approx(1.0, abs=1e-6)
 
 
 def test_brief_next_uses_upcoming_scheduled_fixture(client, db):
@@ -96,6 +101,9 @@ def test_brief_next_uses_upcoming_scheduled_fixture(client, db):
     body = response.json()
     assert body["data"]["opponent"] == "Napoli"
     assert body["data"]["matches_considered"] == 3
+    assert body["data"]["win_probability"] is not None
+    total = body["data"]["win_probability"] + body["data"]["draw_probability"] + body["data"]["loss_probability"]
+    assert total == pytest.approx(1.0, abs=1e-6)
 
 
 def test_llm_failure_falls_back_to_template(client, db, monkeypatch):

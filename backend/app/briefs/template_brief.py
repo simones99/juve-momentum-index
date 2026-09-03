@@ -1,12 +1,43 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.constants import TEAM_NAME
+from app.features.elo import INITIAL_ELO
+from app.features.win_probability import estimate_match_probabilities
+from app.models.elo_rating import EloRating
 from app.models.juve_momentum import JuveMomentum
 from app.schemas.brief import BriefData
 
 RESULT_POINTS = {"W": 3, "D": 1, "L": 0}
 RESULT_LABELS_IT = {"W": "vinto", "D": "pareggiato", "L": "perso"}
 TREND_LABELS_IT = {"up": "in crescita", "down": "in calo", "flat": "stabile"}
+
+
+def _current_elo(db: Session, team: str) -> float:
+    """Most recent known elo_after for `team`, or INITIAL_ELO if the team
+    has no rating history yet (never played in the dataset)."""
+    rating = db.scalar(
+        select(EloRating.elo_after).where(EloRating.team == team).order_by(EloRating.rating_date.desc()).limit(1)
+    )
+    return float(rating) if rating is not None else INITIAL_ELO
+
+
+def _elo_before_at_match(db: Session, match_id: int, team: str) -> float | None:
+    rating = db.scalar(
+        select(EloRating.elo_before).where(EloRating.match_id == match_id, EloRating.team == team)
+    )
+    return float(rating) if rating is not None else None
+
+
+def _juve_perspective_probabilities(is_home: bool, juve_elo: float, opponent_elo: float) -> dict[str, float]:
+    """estimate_match_probabilities() is keyed by home/away side; this
+    reframes its output as {win, draw, loss} from Juventus' perspective
+    regardless of which side Juve is on."""
+    if is_home:
+        probs = estimate_match_probabilities(juve_elo, opponent_elo)
+        return {"win": probs["home"], "draw": probs["draw"], "loss": probs["away"]}
+    probs = estimate_match_probabilities(opponent_elo, juve_elo)
+    return {"win": probs["away"], "draw": probs["draw"], "loss": probs["home"]}
 
 
 def _elo_trend(elos: list[float]) -> str:
@@ -37,8 +68,13 @@ def _head_to_head(db: Session, opponent: str, n: int = 5) -> str | None:
     return f"{wins}V-{draws}N-{losses}P nelle ultime {len(rows)} sfide"
 
 
-def build_pre_match_brief_data(db: Session, opponent: str | None, n: int = 5) -> BriefData:
-    """Uses the last N played matches (any opponent) to describe current form."""
+def build_pre_match_brief_data(
+    db: Session, opponent: str | None, n: int = 5, is_home: bool = True
+) -> BriefData:
+    """Uses the last N played matches (any opponent) to describe current form.
+    `is_home` says whether the upcoming fixture has Juventus at home — it
+    only affects the win-probability estimate (home advantage applies to
+    whichever side is actually playing at home)."""
     rows = list(
         db.scalars(select(JuveMomentum).order_by(JuveMomentum.match_date.desc()).limit(n))
     )
@@ -52,6 +88,13 @@ def build_pre_match_brief_data(db: Session, opponent: str | None, n: int = 5) ->
     avg_goal_diff = sum(r.goals_for - r.goals_against for r in rows) / len(rows)
     elo_trend = _elo_trend([float(r.elo_after) for r in rows])
 
+    win_probability = draw_probability = loss_probability = None
+    if opponent:
+        juve_elo = _current_elo(db, TEAM_NAME)
+        opponent_elo = _current_elo(db, opponent)
+        probs = _juve_perspective_probabilities(is_home, juve_elo, opponent_elo)
+        win_probability, draw_probability, loss_probability = probs["win"], probs["draw"], probs["loss"]
+
     return BriefData(
         kind="pre",
         opponent=opponent,
@@ -61,6 +104,9 @@ def build_pre_match_brief_data(db: Session, opponent: str | None, n: int = 5) ->
         avg_goal_diff=avg_goal_diff,
         elo_trend=elo_trend,
         head_to_head_recent=_head_to_head(db, opponent) if opponent else None,
+        win_probability=win_probability,
+        draw_probability=draw_probability,
+        loss_probability=loss_probability,
     )
 
 
@@ -71,6 +117,14 @@ def build_post_match_brief_data(db: Session, match_id: int, n: int = 5) -> Brief
     row = db.scalar(select(JuveMomentum).where(JuveMomentum.match_id == match_id))
     if row is None:
         raise ValueError(f"No juve_momentum row for match_id={match_id}")
+
+    win_probability = draw_probability = loss_probability = None
+    opponent_elo_before = _elo_before_at_match(db, match_id, row.opponent)
+    if opponent_elo_before is not None:
+        probs = _juve_perspective_probabilities(
+            row.home_away == "H", float(row.elo_before), opponent_elo_before
+        )
+        win_probability, draw_probability, loss_probability = probs["win"], probs["draw"], probs["loss"]
 
     return BriefData(
         kind="post",
@@ -87,6 +141,9 @@ def build_post_match_brief_data(db: Session, match_id: int, n: int = 5) -> Brief
         elo_before=float(row.elo_before),
         elo_after=float(row.elo_after),
         head_to_head_recent=_head_to_head(db, row.opponent, n),
+        win_probability=win_probability,
+        draw_probability=draw_probability,
+        loss_probability=loss_probability,
     )
 
 
@@ -109,6 +166,11 @@ def _render_pre_match(data: BriefData) -> list[str]:
     ]
     if data.head_to_head_recent:
         lines.append(f"Precedenti recenti contro {data.opponent}: {data.head_to_head_recent}.")
+    if data.win_probability is not None:
+        lines.append(
+            f"Secondo il modello Elo: Juve {data.win_probability * 100:.0f}%, pareggio "
+            f"{data.draw_probability * 100:.0f}%, {data.opponent} {data.loss_probability * 100:.0f}%."
+        )
     return lines
 
 
@@ -126,4 +188,9 @@ def _render_post_match(data: BriefData) -> list[str]:
         )
     if data.head_to_head_recent:
         lines.append(f"Precedenti recenti contro {data.opponent}: {data.head_to_head_recent}.")
+    if data.win_probability is not None:
+        predicted = {"W": data.win_probability, "D": data.draw_probability, "L": data.loss_probability}[
+            data.result
+        ]
+        lines.append(f"Il modello Elo dava questo esito al {predicted * 100:.0f}% prima del fischio d'inizio.")
     return lines

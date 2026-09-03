@@ -42,6 +42,8 @@ def next_match_brief(n: int = Query(5, ge=1, le=20), db: Session = Depends(get_d
     )
     next_match = db.scalar(stmt)
     opponent = None
+    is_home = True
     if next_match:
-        opponent = next_match.away_team if next_match.home_team == TEAM_NAME else next_match.home_team
-    return get_pre_match_brief(db, opponent, n)
+        is_home = next_match.home_team == TEAM_NAME
+        opponent = next_match.away_team if is_home else next_match.home_team
+    return get_pre_match_brief(db, opponent, n, is_home)

@@ -19,9 +19,10 @@ quando configurato, arricchito da un LLM via [OpenRouter](https://openrouter.ai/
 - Combina l'Elo normalizzato con la forma recente (punti e differenza reti su
   finestre di 5/10 partite) in un **Momentum Index** 0-100.
 - Genera un **brief testuale** pre-partita (forma recente, trend Elo, precedenti
-  contro l'avversario) o post-partita (confronto tra la prestazione e la media
-  recente), con arricchimento opzionale via LLM (OpenRouter) e fallback automatico
-  a testo template se l'LLM non è disponibile.
+  contro l'avversario, **probabilità di vittoria/pareggio/sconfitta**) o post-partita
+  (confronto tra la prestazione e la media recente, più l'esito che il modello
+  avrebbe previsto), con arricchimento opzionale via LLM (OpenRouter) e fallback
+  automatico a testo template se l'LLM non è disponibile.
 - Dashboard Next.js con 4 viste: Overview, Momentum Details, Matches, Match Brief.
 
 ## Architettura
@@ -113,6 +114,10 @@ d'ambiente Render).
 - **Elo semplificato**: il dataset contiene solo partite della Juventus, quindi
   non è un vero Elo storico multi-squadra — ogni avversario riparte da 1500 alla
   prima apparizione nel dataset.
+- **Probabilità di vittoria euristiche**: derivano dall'expected score Elo più un
+  modello di pareggio a campana centrato sulla parità di rating (`features/win_probability.py`),
+  con costanti scelte per avvicinarsi al tasso di pareggi storico della Serie A —
+  non è un modello calibrato su dati storici reali.
 - **Rate limit football-data.org**: 10 richieste/minuto sul piano gratuito; il
   client applica backoff automatico.
 - **Cold start Render (piano free)**: il backend può impiegare 30-60s a
