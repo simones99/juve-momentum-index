@@ -1,4 +1,5 @@
 import type {
+  AwayFixturesResponse,
   BriefResponse,
   CompetitionOut,
   MatchListResponse,
@@ -26,7 +27,14 @@ async function apiFetch<T>(path: string, params?: Record<string, string | number
   }
   const response = await fetch(url.toString(), { cache: "no-store" });
   if (!response.ok) {
-    throw new ApiError(response.status, `${path} failed with status ${response.status}`);
+    let detail = `${path} failed with status ${response.status}`;
+    try {
+      const body = await response.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // response body wasn't JSON (or empty) — keep the generic message
+    }
+    throw new ApiError(response.status, detail);
   }
   return response.json() as Promise<T>;
 }
@@ -78,6 +86,10 @@ export function getSeasons(): Promise<string[]> {
 
 export function getCompetitions(): Promise<CompetitionOut[]> {
   return apiFetch<CompetitionOut[]>("/api/v1/competitions");
+}
+
+export function getAwayFixtures(fromCity: string): Promise<AwayFixturesResponse> {
+  return apiFetch<AwayFixturesResponse>("/api/v1/travel/away-fixtures", { from_city: fromCity });
 }
 
 export { ApiError };

@@ -19,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/momentum">Momentum Details</Link>
               <Link href="/matches">Matches</Link>
               <Link href="/brief/next">Match Brief</Link>
+              <Link href="/trasferte">Trasferte</Link>
             </nav>
           </div>
         </header>

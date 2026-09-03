@@ -148,6 +148,22 @@ h2 {
   font-size: 0.85rem;
 }
 
+.filters button {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filters button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

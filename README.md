@@ -27,6 +27,11 @@ quando configurato, arricchito da un LLM via [OpenRouter](https://openrouter.ai/
 - Sezione **Prossime partite** in Overview con data, orario e stadio (richiede
   ingestion via football-data.org: il fallback Wikipedia copre solo risultati
   passati, non calendario/sede delle prossime gare).
+- Pagina **Trasferte**: cerchi la tua città di partenza (geocoding via
+  Nominatim/OpenStreetMap) e ottieni le prossime trasferte della Juve ordinate
+  per difficoltà — distanza e **tempo di guida reale** (routing su rete
+  stradale via OSRM, non una stima a velocità media), con indicazione se
+  andata/ritorno in giornata è ragionevolmente fattibile.
 
 ## Architettura
 
@@ -35,7 +40,8 @@ Next.js (Vercel)  ──HTTP──▶  FastAPI (Render, Docker)  ──▶  Post
                                      │
                                      ├─ ingestion: football-data.org (primaria)
                                      │             + fallback scraping Wikipedia
-                                     └─ brief: template Python + OpenRouter (opzionale)
+                                     ├─ brief: template Python + OpenRouter (opzionale)
+                                     └─ trasferte: Nominatim (geocoding) + OSRM (routing reale)
 ```
 
 - **Backend**: FastAPI + SQLAlchemy + Alembic, Python 3.11+.
@@ -111,6 +117,10 @@ d'ambiente Render).
   richieste/minuto) — fonte primaria per Serie A e Champions League.
 - Wikipedia (pagine "20XX-YY Serie A") — fallback automatico solo per Serie A,
   usato se l'API fallisce o esaurisce la quota per una stagione.
+- [Nominatim](https://nominatim.org/) (OpenStreetMap) — geocoding gratuito
+  della città di partenza per la pagina Trasferte.
+- [OSRM](http://project-osrm.org/) (demo server pubblico) — routing stradale
+  reale (distanza e tempo di guida) per la pagina Trasferte.
 
 ## Limiti noti
 
@@ -141,6 +151,16 @@ d'ambiente Render).
   (stadio) — la sezione "Prossime partite" resta vuota finché non si
   configura una vera ingestion da football-data.org. È un fallback
   secondario, non il percorso critico.
+- **Trasferte**: le coordinate degli stadi (`app/core/stadiums.py`) sono un
+  elenco statico delle squadre già viste nel dataset — un avversario nuovo non
+  presente in elenco viene mostrato senza distanza/punteggio invece di dati
+  inventati. Il server demo pubblico di OSRM non ha SLA garantiti: se
+  irraggiungibile, la app ripiega su una stima da distanza in linea d'aria
+  corretta (marcata esplicitamente `is_estimated` in risposta e in UI), mai
+  su un tempo di guida presentato come reale quando non lo è. La finestra
+  "andata/ritorno in giornata fattibile" (parti non prima delle 4:00, rientri
+  entro le 2:00) è un giudizio ragionevole, non basata su orari treni o
+  traffico reale.
 
 ## Test
 

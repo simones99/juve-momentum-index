@@ -86,3 +86,29 @@ export interface CompetitionOut {
   code: string;
   name: string;
 }
+
+export interface ResolvedLocation {
+  query: string;
+  display_name: string;
+  lat: number;
+  lon: number;
+}
+
+export interface AwayFixtureOut {
+  match_id: number;
+  opponent: string;
+  match_date: string;
+  competition: string;
+  stadium: string | null;
+  stadium_city: string | null;
+  distance_km: number | null;
+  duration_hours: number | null;
+  is_estimated: boolean;
+  effort_score: number | null;
+  day_trip_feasible: boolean | null;
+}
+
+export interface AwayFixturesResponse {
+  from_location: ResolvedLocation;
+  fixtures: AwayFixtureOut[];
+}
