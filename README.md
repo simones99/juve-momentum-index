@@ -114,10 +114,17 @@ d'ambiente Render).
 - **Elo semplificato**: il dataset contiene solo partite della Juventus, quindi
   non è un vero Elo storico multi-squadra — ogni avversario riparte da 1500 alla
   prima apparizione nel dataset.
-- **Probabilità di vittoria euristiche**: derivano dall'expected score Elo più un
-  modello di pareggio a campana centrato sulla parità di rating (`features/win_probability.py`),
-  con costanti scelte per avvicinarsi al tasso di pareggi storico della Serie A —
-  non è un modello calibrato su dati storici reali.
+- **Probabilità di vittoria, backtestate ma non "calibrate" in senso stretto**:
+  derivano dall'expected score Elo più un modello di pareggio a campana
+  (`features/win_probability.py`). Le costanti sono state validate con
+  `scripts/backtest_win_probability.py` tramite cross-validation
+  leave-one-season-out su 6 stagioni reali (2019-20 → 2024-25, 228 partite),
+  valutando log loss / Brier score / accuracy contro una baseline uniforme e
+  una baseline "frequenze storiche". Risultato: il modello batte entrambe le
+  baseline in modo consistente ma con margine modesto (log loss medio 0.989
+  vs 0.995 della baseline a frequenze) — un margine reale ma piccolo su un
+  dataset di sole 228 partite di un unico club dominante, non una
+  dimostrazione di forte potere predittivo.
 - **Rate limit football-data.org**: 10 richieste/minuto sul piano gratuito; il
   client applica backoff automatico.
 - **Cold start Render (piano free)**: il backend può impiegare 30-60s a
@@ -141,6 +148,19 @@ I test di calcolo (Elo, rolling stats, Momentum Index) sono puri e non richiedon
 un database. I test API richiedono un Postgres raggiungibile: in locale creano
 automaticamente un database `<nome>_test` separato da quello di sviluppo (per non
 sovrascrivere i tuoi dati), in CI usano il servizio Postgres del workflow.
+
+### Backtest del modello di probabilità
+
+```bash
+cd backend
+python -m app.ingestion.ingest --seasons 2019-2020,2020-2021,2021-2022,2022-2023,2023-2024,2024-2025
+python scripts/backtest_win_probability.py
+```
+
+Valuta `features/win_probability.py` con metodologia da modello ML (holdout
+cronologico + cross-validation leave-one-season-out, log loss/Brier/accuracy
+contro baseline uniforme e a frequenze storiche) e riporta anche una tabella
+di calibrazione. Vedi il docstring dello script e la nota in "Limiti noti".
 
 ## Licenza
 

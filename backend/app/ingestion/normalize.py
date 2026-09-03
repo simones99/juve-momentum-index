@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -5,14 +6,29 @@ from app.core.constants import SOURCE_FOOTBALL_DATA, SOURCE_WIKIPEDIA, TEAM_NAME
 
 JUVENTUS_ALIASES = {"juventus", "juventus fc", "juve"}
 
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _strip_periods(name: str) -> str:
+    """Wikipedia's official team names vary in punctuation between seasons'
+    articles (e.g. "AC Milan" one year, "A.C. Milan" the next, for the same
+    club) even though the club itself hasn't changed. Left unnormalized,
+    each variant is treated as a distinct team, which silently resets that
+    team's Elo history and fragments head-to-head stats every time the
+    punctuation style flips. Periods carry no identity here, so stripping
+    them (and collapsing the resulting double spaces) collapses "A.C. Milan"
+    and "AC Milan" back into one name."""
+    return _WHITESPACE_RE.sub(" ", name.replace(".", "")).strip()
+
 
 def canonicalize_team_name(name: str) -> str:
-    """Juventus appears under different spellings depending on the source
-    (football-data.org uses the official "Juventus FC", the Wikipedia
-    scraper uses whatever label is on the results grid). Canonicalizing to
-    a single name is required for the elo/momentum "is this Juve" filter to
-    work across sources."""
-    return TEAM_NAME if name.strip().lower() in JUVENTUS_ALIASES else name
+    """Normalizes punctuation variants of the same club name, and maps
+    Juventus specifically to TEAM_NAME regardless of source spelling
+    (football-data.org uses "Juventus FC", the Wikipedia scraper uses
+    whatever label is on the results grid) — required for the elo/momentum
+    "is this Juve" filter to work across sources and seasons."""
+    normalized = _strip_periods(name)
+    return TEAM_NAME if normalized.strip().lower() in JUVENTUS_ALIASES else normalized
 
 
 @dataclass(frozen=True)

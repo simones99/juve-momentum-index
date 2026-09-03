@@ -23,10 +23,11 @@ def test_draw_probability_peaks_at_zero_diff():
 
 
 def test_large_rating_gap_favors_stronger_side_and_shrinks_draw():
+    even_draw = estimate_match_probabilities(1500, 1500)["draw"]
     probs = estimate_match_probabilities(1800, 1400)
-    assert probs["home"] > 0.85
-    assert probs["draw"] < 0.05
-    assert probs["away"] < probs["draw"] + 0.05
+    assert probs["home"] > 0.7
+    assert probs["home"] > probs["away"] + probs["draw"]
+    assert probs["draw"] < even_draw
 
 
 def test_underdog_at_home_can_still_be_disfavored():

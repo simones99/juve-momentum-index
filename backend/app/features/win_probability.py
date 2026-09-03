@@ -10,11 +10,24 @@ probability is modeled as peaking when the two sides are evenly matched
 and decaying as the Elo gap widens, then the remaining probability mass is
 split between win/loss in proportion to the classic expected score.
 
-DRAW_PEAK_PROBABILITY and DRAW_DECAY_SCALE are hand-picked to be roughly in
-line with Serie A's long-run draw rate (~26%), not fitted to historical
-results. This is a simplified heuristic, not a calibrated forecasting
-model - documented here rather than hidden, consistent with the rest of
-this package (see the limitation note in elo.py).
+DRAW_PEAK_PROBABILITY and DRAW_DECAY_SCALE were backtested with
+scripts/backtest_win_probability.py against 6 seasons (2019-20 to 2024-25,
+228 matches) of Juventus' actual Serie A results, scored the way a
+probabilistic classifier would be (log loss, Brier score, accuracy)
+against a uniform baseline and a "predict the training set's W/D/L
+frequencies" baseline, using leave-one-season-out cross-validation.
+
+Findings from that backtest (see the script for full output):
+  - Blindly grid-searching BOTH constants per fold overfits on ~190
+    matches/fold and does not reliably beat the frequency baseline.
+  - A single, isolated change - widening DRAW_DECAY_SCALE from 200 to 400
+    while leaving DRAW_PEAK_PROBABILITY unchanged - beat every other
+    variant (uniform, frequency baseline, unmodified defaults, and full
+    per-fold tuning) on mean cross-validated log loss, with the lowest
+    variance across folds. That is the one change kept here.
+  - Even so, the model's edge over the naive frequency baseline is small
+    on this dataset (228 matches, one dominant club) - this remains a
+    simplified heuristic, not a rigorously calibrated forecasting model.
 """
 
 import math
@@ -22,7 +35,7 @@ import math
 from app.features.elo import HOME_ADVANTAGE, expected_score
 
 DRAW_PEAK_PROBABILITY = 0.28  # P(draw) when both sides have identical (home-adjusted) ratings
-DRAW_DECAY_SCALE = 200.0  # Elo points; draw probability decays as a Gaussian in the rating gap
+DRAW_DECAY_SCALE = 400.0  # Elo points; draw probability decays as a Gaussian in the rating gap
 
 
 def estimate_draw_probability(rating_diff: float, scale: float = DRAW_DECAY_SCALE) -> float:
