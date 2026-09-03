@@ -76,3 +76,38 @@ def test_list_matches_filters_by_result(client, db):
 def test_get_match_not_found_returns_404(client, db):
     response = client.get("/api/v1/matches/999999")
     assert response.status_code == 404
+
+
+def test_upcoming_matches_returns_only_scheduled_ordered_by_date_with_venue(client, db):
+    db.add(_make_match(external_id="finished", status="FINISHED"))
+    db.add(
+        _make_match(
+            external_id="later",
+            away_team="Roma",
+            status="SCHEDULED",
+            home_goals=None,
+            away_goals=None,
+            match_date=datetime(2030, 2, 1, tzinfo=timezone.utc),
+            venue="Allianz Stadium",
+        )
+    )
+    db.add(
+        _make_match(
+            external_id="sooner",
+            away_team="Napoli",
+            status="SCHEDULED",
+            home_goals=None,
+            away_goals=None,
+            match_date=datetime(2030, 1, 1, tzinfo=timezone.utc),
+            venue="Stadio Diego Armando Maradona",
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/upcoming")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["away_team"] == "Napoli"
+    assert body[0]["venue"] == "Stadio Diego Armando Maradona"
+    assert body[1]["away_team"] == "Roma"

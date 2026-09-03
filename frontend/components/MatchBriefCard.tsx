@@ -11,7 +11,7 @@ function ProbabilityBar({ data }: { data: BriefData }) {
   const draw = data.draw_probability * 100;
   const loss = data.loss_probability * 100;
   const opponentLabel = data.opponent ?? "avversario";
-  const title = data.kind === "pre" ? "Probabilità (modello Elo)" : "Probabilità pre-partita (modello Elo)";
+  const title = data.kind === "pre" ? "Probabilità di risultato" : "Probabilità prima della partita";
 
   return (
     <div style={{ marginBottom: 18 }}>
@@ -25,6 +25,9 @@ function ProbabilityBar({ data }: { data: BriefData }) {
         <span>Juve {win.toFixed(0)}%</span>
         <span style={{ color: "var(--text-muted)" }}>Pareggio {draw.toFixed(0)}%</span>
         <span>{opponentLabel} {loss.toFixed(0)}%</span>
+      </div>
+      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 6 }}>
+        Basato sullo storico delle partite — indovina il risultato circa nel 56% dei casi.
       </div>
     </div>
   );

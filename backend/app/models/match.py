@@ -33,6 +33,8 @@ class Match(Base):
     home_goals: Mapped[int | None] = mapped_column(Integer, nullable=True)
     away_goals: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    venue: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="SCHEDULED")
     source: Mapped[str] = mapped_column(String(32), nullable=False)
 

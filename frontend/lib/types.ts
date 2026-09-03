@@ -10,6 +10,7 @@ export interface MatchOut {
   away_team: string;
   home_goals: number | null;
   away_goals: number | null;
+  venue: string | null;
   status: string;
   result: ResultLetter | null;
 }

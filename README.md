@@ -24,6 +24,9 @@ quando configurato, arricchito da un LLM via [OpenRouter](https://openrouter.ai/
   avrebbe previsto), con arricchimento opzionale via LLM (OpenRouter) e fallback
   automatico a testo template se l'LLM non è disponibile.
 - Dashboard Next.js con 4 viste: Overview, Momentum Details, Matches, Match Brief.
+- Sezione **Prossime partite** in Overview con data, orario e stadio (richiede
+  ingestion via football-data.org: il fallback Wikipedia copre solo risultati
+  passati, non calendario/sede delle prossime gare).
 
 ## Architettura
 
@@ -133,9 +136,11 @@ d'ambiente Render).
   richiesta va in timeout, il Match Brief torna automaticamente al testo
   template — l'endpoint non fallisce mai per questo motivo.
 - **Fallback Wikipedia**: non copre la Champions League (formato cambiato tra le
-  stagioni) e non ha date puntuali per singola partita (usa una data
-  placeholder di inizio stagione) — è un fallback secondario, non il percorso
-  critico.
+  stagioni), non ha date puntuali per singola partita (usa una data
+  placeholder di inizio stagione) e non include partite future o sede
+  (stadio) — la sezione "Prossime partite" resta vuota finché non si
+  configura una vera ingestion da football-data.org. È un fallback
+  secondario, non il percorso critico.
 
 ## Test
 

@@ -15,6 +15,7 @@ class MatchOut(BaseModel):
     away_team: str
     home_goals: int | None
     away_goals: int | None
+    venue: str | None = None
     status: str
     result: str | None = None  # W/D/L from Juventus' perspective, None if not yet played
 

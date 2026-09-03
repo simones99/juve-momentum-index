@@ -30,6 +30,7 @@ def upsert_match(db: Session, match_in: MatchIn) -> Match:
         existing.competition = match_in.competition
         existing.home_goals = match_in.home_goals
         existing.away_goals = match_in.away_goals
+        existing.venue = match_in.venue or existing.venue
         existing.status = match_in.status
         existing.source = match_in.source
         return existing
@@ -44,6 +45,7 @@ def upsert_match(db: Session, match_in: MatchIn) -> Match:
         away_team=match_in.away_team,
         home_goals=match_in.home_goals,
         away_goals=match_in.away_goals,
+        venue=match_in.venue,
         status=match_in.status,
         source=match_in.source,
     )

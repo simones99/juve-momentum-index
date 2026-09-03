@@ -1,7 +1,8 @@
-import { getMomentumOverview, getSeasons } from "@/lib/api";
+import { getMomentumOverview, getSeasons, getUpcomingMatches } from "@/lib/api";
 import { KpiCard } from "@/components/KpiCard";
 import { SeasonFilter } from "@/components/Filters";
 import { MomentumChart } from "@/components/charts/MomentumChart";
+import { UpcomingMatches } from "@/components/UpcomingMatches";
 
 export default async function OverviewPage({
   searchParams,
@@ -9,9 +10,10 @@ export default async function OverviewPage({
   searchParams: Promise<{ season?: string }>;
 }) {
   const params = await searchParams;
-  const [overview, seasons] = await Promise.all([
+  const [overview, seasons, upcoming] = await Promise.all([
     getMomentumOverview(params.season),
     getSeasons(),
+    getUpcomingMatches(3),
   ]);
 
   const { series, kpi } = overview;
@@ -20,6 +22,8 @@ export default async function OverviewPage({
     <>
       <h1>Overview</h1>
       <p className="subtitle">Andamento del Momentum Index della Juventus nel tempo.</p>
+
+      <UpcomingMatches matches={upcoming} />
 
       <SeasonFilter seasons={seasons} current={params.season} />
 

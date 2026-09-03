@@ -60,6 +60,10 @@ export function getMatch(id: number): Promise<MatchOut> {
   return apiFetch<MatchOut>(`/api/v1/matches/${id}`);
 }
 
+export function getUpcomingMatches(limit = 5): Promise<MatchOut[]> {
+  return apiFetch<MatchOut[]>("/api/v1/matches/upcoming", { limit });
+}
+
 export function getMatchBrief(id: number): Promise<BriefResponse> {
   return apiFetch<BriefResponse>(`/api/v1/matches/${id}/brief`);
 }

@@ -42,6 +42,7 @@ class MatchIn:
     away_team: str
     home_goals: int | None
     away_goals: int | None
+    venue: str | None
     status: str
     source: str
 
@@ -69,6 +70,7 @@ def normalize_football_data_match(raw: dict) -> MatchIn:
         away_team=canonicalize_team_name(raw["awayTeam"]["name"]),
         home_goals=score.get("home"),
         away_goals=score.get("away"),
+        venue=raw.get("venue"),
         status=raw["status"],
         source=SOURCE_FOOTBALL_DATA,
     )
@@ -100,6 +102,7 @@ def normalize_wikipedia_row(
         away_team=canonicalize_team_name(row["away_team"]),
         home_goals=home_goals,
         away_goals=away_goals,
+        venue=None,  # Wikipedia's results grid doesn't carry venue information
         status=status,
         source=SOURCE_WIKIPEDIA,
     )

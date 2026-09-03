@@ -33,7 +33,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         {match.home_team} {match.home_goals ?? "-"}-{match.away_goals ?? "-"} {match.away_team}
       </h1>
       <p className="subtitle">
-        {formatDate(match.match_date)} · {match.competition} · {match.season}{" "}
+        {formatDate(match.match_date)} · {match.competition} · {match.season}
+        {match.venue ? ` · ${match.venue}` : ""}{" "}
         {match.result && <ResultBadge result={match.result} />}
       </p>
 
