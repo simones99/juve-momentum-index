@@ -3,6 +3,11 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AwayFixtureOut } from "@/lib/types";
 
+const WIN = "#34c759";
+const LOSS = "#ff453a";
+const GRID_LINE = "rgba(255, 255, 255, 0.08)";
+const TICK_COLOR = "rgba(245, 245, 247, 0.4)";
+
 export function AwayTripsChart({ fixtures }: { fixtures: AwayFixtureOut[] }) {
   const scored = fixtures.filter((f) => f.effort_score !== null);
   if (scored.length === 0) {
@@ -20,9 +25,29 @@ export function AwayTripsChart({ fixtures }: { fixtures: AwayFixtureOut[] }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(160, data.length * 44)}>
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 4 }}>
-        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
-        <YAxis type="category" dataKey="opponent" width={110} tick={{ fontSize: 12 }} />
+        <XAxis
+          type="number"
+          domain={[0, 100]}
+          tick={{ fontSize: 12, fill: TICK_COLOR }}
+          axisLine={{ stroke: GRID_LINE }}
+          tickLine={false}
+        />
+        <YAxis
+          type="category"
+          dataKey="opponent"
+          width={110}
+          tick={{ fontSize: 12, fill: TICK_COLOR }}
+          axisLine={{ stroke: GRID_LINE }}
+          tickLine={false}
+        />
         <Tooltip
+          contentStyle={{
+            background: "rgba(20, 20, 23, 0.92)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 10,
+            fontSize: 12,
+          }}
+          labelStyle={{ color: "#f5f5f7" }}
           formatter={(value, _name, item) => [
             `${value} — ${item.payload.feasible ? "andata/ritorno in giornata" : "richiede pernottamento"}`,
             "Difficoltà",
@@ -30,7 +55,7 @@ export function AwayTripsChart({ fixtures }: { fixtures: AwayFixtureOut[] }) {
         />
         <Bar dataKey="effort" radius={[0, 6, 6, 0]}>
           {data.map((d) => (
-            <Cell key={d.opponent} fill={d.feasible ? "#1a7f37" : "#cf222e"} />
+            <Cell key={d.opponent} fill={d.feasible ? WIN : LOSS} />
           ))}
         </Bar>
       </BarChart>
