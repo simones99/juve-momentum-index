@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=juventum
+      - POSTGRES_PASSWORD=juventum
+      - POSTGRES_DB=juventum
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U juventum -d juventum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://juventum:juventum@db:5432/juventum
+      - FOOTBALL_DATA_API_KEY=${FOOTBALL_DATA_API_KEY:-}
+      - JUVENTUS_TEAM_ID=${JUVENTUS_TEAM_ID:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      - ENABLE_LLM_BRIEF=${ENABLE_LLM_BRIEF:-true}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ingest:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgresql+psycopg://juventum:juventum@db:5432/juventum
+      - FOOTBALL_DATA_API_KEY=${FOOTBALL_DATA_API_KEY:-}
+      - JUVENTUS_TEAM_ID=${JUVENTUS_TEAM_ID:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["./docker-entrypoint.sh"]
+    command: ["python", "-m", "app.ingestion.ingest", "--seasons", "${SEASONS:-2022-2023,2023-2024,2024-2025}"]
+    profiles: ["tools"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:

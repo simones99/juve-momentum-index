@@ -1,0 +1,29 @@
+# Editor/tooling cruft unrelated to this project (Clojure LSP artifacts from another setup)
+.calva/
+.clj-kondo/
+.lsp/
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Env files (never commit secrets)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# Local artifacts
+*.log
