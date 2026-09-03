@@ -4,9 +4,14 @@ unavailable or missing data for a Serie A season (see ingest.py).
 Wikipedia's "20XX-YY Serie A" articles publish a full round-robin results
 grid: a square table where row headers are full team names (home side) and
 column headers are 3-letter team codes (away side), and cell (row=home,
-col=away) holds the score as "H-A". We parse that grid and pull out only
-the Juventus row (home matches) and column (away matches), resolving both
-row and column labels to the same canonical name (see _build_name_map).
+col=away) holds the score as "H-A". We parse that grid and extract EVERY
+match in it (up to 380 for a 20-team Serie A season: 20*19 ordered pairs),
+not just Juventus' — ingesting the full league gives every opponent a real
+Elo history instead of resetting to INITIAL_ELO on first appearance (see
+the limitation note in features/elo.py). Row and column labels are resolved
+to the same canonical name per team (see _build_name_map) since the grid
+uses two different label systems (full names for rows, codes for columns)
+for the same 20 teams.
 
 This is inherently best-effort and more fragile than the API path (page
 structure can change between seasons) — it is not on the critical path.
@@ -29,7 +34,6 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-JUVENTUS_ALIASES = {"juventus", "juve", "juv"}
 SCORE_PATTERN = re.compile(r"^\s*(\d+)\s*[-–]\s*(\d+)\s*$")
 
 
@@ -47,13 +51,13 @@ def _fetch_page(title: str) -> tuple[str, list[pd.DataFrame]]:
     return html, pd.read_html(StringIO(html))
 
 
-def _find_grid_table(soup: BeautifulSoup, col_label: str) -> object | None:
+def _find_grid_table(soup: BeautifulSoup, anchor_label: str) -> object | None:
     """Locates the actual <table> DOM node behind the pandas-parsed results
-    grid, by finding a table whose headers include our resolved Juventus
-    column code (e.g. "JUV") among ~20 header cells."""
+    grid, by finding a table whose headers include a known column code from
+    that grid (any one of them works as an anchor) among ~20 header cells."""
     for table in soup.find_all("table"):
         header_texts = {th.get_text(strip=True) for th in table.find_all("th")}
-        if col_label in header_texts and len(header_texts) >= 15:
+        if anchor_label in header_texts and len(header_texts) >= 15:
             return table
     return None
 
@@ -86,19 +90,13 @@ def _looks_like_results_grid(df: pd.DataFrame) -> bool:
     return any(SCORE_PATTERN.match(c) for c in sample_cells)
 
 
-def _find_juve_label(labels: list[str]) -> str | None:
-    for label in labels:
-        if str(label).strip().lower() in JUVENTUS_ALIASES:
-            return label
-    return None
-
-
 def scrape_serie_a_season(season: str) -> list[dict]:
     """Returns a list of dicts with keys: match_date, home_team, away_team,
-    home_goals, away_goals — ready for normalize_wikipedia_row(). match_date
-    is a best-effort placeholder (Wikipedia's grid table has no per-match
-    date) set to season start; callers relying on precise dates should
-    prefer the football-data.org path.
+    home_goals, away_goals — ready for normalize_wikipedia_row(). Extracts
+    EVERY match in the season's results grid, not just Juventus'.
+    match_date is a best-effort placeholder (Wikipedia's grid table has no
+    per-match date) set to season start; callers relying on precise dates
+    should prefer the football-data.org path.
     """
     title = _season_wikipedia_title(season)
     try:
@@ -113,17 +111,12 @@ def scrape_serie_a_season(season: str) -> list[dict]:
         return []
 
     grid = grid.set_index(grid.columns[0])
-    row_label = _find_juve_label(list(grid.index.astype(str)))
-    col_label = _find_juve_label(list(grid.columns.astype(str)))
-    if row_label is None or col_label is None:
-        logger.warning("Could not locate Juventus row/column in results grid for %s", title)
-        return []
 
     soup = BeautifulSoup(html, "lxml")
-    grid_table = _find_grid_table(soup, str(col_label))
-    wanted_texts = {str(c) for c in grid.columns if c != col_label} | {
-        str(i) for i in grid.index if i != row_label
-    }
+    # Any column code works as the anchor to locate the underlying <table>
+    # DOM node — nothing about this step is Juventus-specific.
+    grid_table = _find_grid_table(soup, str(grid.columns[0]))
+    wanted_texts = {str(c) for c in grid.columns} | {str(i) for i in grid.index}
     name_map = _build_name_map(grid_table, wanted_texts) if grid_table is not None else {}
 
     def resolve(name: str) -> str:
@@ -132,37 +125,38 @@ def scrape_serie_a_season(season: str) -> list[dict]:
     start_year = int(season.split("-")[0])
     placeholder_date = datetime(start_year, 8, 15)
 
-    matches: list[dict] = []
-    for opponent in grid.columns:
-        if opponent == col_label:
-            continue
-        cell = str(grid.loc[row_label, opponent])
-        m = SCORE_PATTERN.match(cell)
-        if m:
-            matches.append(
-                {
-                    "match_date": placeholder_date,
-                    "home_team": "Juventus",
-                    "away_team": resolve(str(opponent)),
-                    "home_goals": int(m.group(1)),
-                    "away_goals": int(m.group(2)),
-                }
-            )
+    n_teams = len(grid.index)
+    expected_matches = n_teams * (n_teams - 1)
 
-    for opponent in grid.index:
-        if opponent == row_label:
-            continue
-        cell = str(grid.loc[opponent, col_label])
-        m = SCORE_PATTERN.match(cell)
-        if m:
-            matches.append(
-                {
-                    "match_date": placeholder_date,
-                    "home_team": resolve(str(opponent)),
-                    "away_team": "Juventus",
-                    "home_goals": int(m.group(1)),
-                    "away_goals": int(m.group(2)),
-                }
-            )
+    matches: list[dict] = []
+    for row_raw in grid.index:
+        home_team = resolve(str(row_raw))
+        for col_raw in grid.columns:
+            away_team = resolve(str(col_raw))
+            if home_team == away_team:
+                continue  # diagonal: a team's cell against itself
+            cell = str(grid.loc[row_raw, col_raw])
+            m = SCORE_PATTERN.match(cell)
+            if m:
+                matches.append(
+                    {
+                        "match_date": placeholder_date,
+                        "home_team": home_team,
+                        "away_team": away_team,
+                        "home_goals": int(m.group(1)),
+                        "away_goals": int(m.group(2)),
+                    }
+                )
+
+    if len(matches) < expected_matches:
+        logger.warning(
+            "Extracted %d/%d expected matches from %s results grid (some cells likely carry "
+            "non-numeric annotations, e.g. awarded/voided matches, and were skipped)",
+            len(matches),
+            expected_matches,
+            title,
+        )
+    else:
+        logger.info("Extracted %d matches from %s results grid", len(matches), title)
 
     return matches

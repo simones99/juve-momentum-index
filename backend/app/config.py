@@ -11,7 +11,6 @@ class Settings(BaseSettings):
 
     # External data sources
     football_data_api_key: str = ""
-    juventus_team_id: int = 0
 
     # Match Brief / LLM
     openrouter_api_key: str = ""

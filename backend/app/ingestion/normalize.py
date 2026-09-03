@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.core.constants import SOURCE_FOOTBALL_DATA, SOURCE_WIKIPEDIA, TEAM_NAME
+from app.core.teams import resolve_alias
 
 JUVENTUS_ALIASES = {"juventus", "juventus fc", "juve"}
 
@@ -22,13 +23,24 @@ def _strip_periods(name: str) -> str:
 
 
 def canonicalize_team_name(name: str) -> str:
-    """Normalizes punctuation variants of the same club name, and maps
-    Juventus specifically to TEAM_NAME regardless of source spelling
-    (football-data.org uses "Juventus FC", the Wikipedia scraper uses
-    whatever label is on the results grid) — required for the elo/momentum
-    "is this Juve" filter to work across sources and seasons."""
+    """Normalizes punctuation variants of the same club name, maps Juventus
+    specifically to TEAM_NAME regardless of source spelling (football-data.org
+    uses "Juventus FC", the Wikipedia scraper uses whatever label is on the
+    results grid), and — for other clubs — resolves known alternate spellings
+    (see app.core.teams) to the canonical name already used throughout this
+    codebase. Required for the elo/momentum "is this Juve" filter, and for
+    Elo/head-to-head continuity for every other club, to work across sources
+    and seasons.
+
+    Any name not covered by app.core.teams' alias map falls back to the
+    period-stripped form as-is, same as before that module existed — a
+    missing alias means a club's Elo history could fragment across a naming
+    variant we haven't seen yet, not a crash. Run scripts/check_team_names.py
+    after an ingestion to find gaps."""
     normalized = _strip_periods(name)
-    return TEAM_NAME if normalized.strip().lower() in JUVENTUS_ALIASES else normalized
+    if normalized.strip().lower() in JUVENTUS_ALIASES:
+        return TEAM_NAME
+    return resolve_alias(normalized) or normalized
 
 
 @dataclass(frozen=True)

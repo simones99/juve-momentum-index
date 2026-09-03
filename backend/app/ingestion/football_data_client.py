@@ -60,29 +60,10 @@ class FootballDataClient:
             return response.json()
         raise FootballDataRateLimitError("football-data.org rate limit exceeded")
 
-    def get_team(self, team_id: int) -> dict:
-        return self._get(f"/teams/{team_id}")
-
-    def find_team_id_by_name(self, competition_code: str, team_name: str) -> int | None:
-        """One-off helper to resolve JUVENTUS_TEAM_ID (see scripts/resolve_team_id.py)."""
-        data = self._get(f"/competitions/{competition_code}/teams")
-        for team in data.get("teams", []):
-            if team_name.lower() in team.get("name", "").lower():
-                return team["id"]
-        return None
-
-    def get_team_matches(
-        self,
-        team_id: int,
-        competitions: list[str],
-        season: str | None = None,
-        status: str | None = None,
-    ) -> list[dict]:
-        """season is the starting year, e.g. "2024" for the 2024-2025 season."""
-        params: dict = {"competitions": ",".join(competitions)}
-        if season:
-            params["season"] = season
-        if status:
-            params["status"] = status
-        data = self._get(f"/teams/{team_id}/matches", params=params)
+    def get_competition_matches(self, competition_code: str, season: str) -> list[dict]:
+        """All matches for an entire competition/season (e.g. every Serie A
+        fixture, not just Juventus'), so every team gets a real Elo history
+        instead of starting fresh at 1500 the first time it meets Juve.
+        `season` is the starting year, e.g. "2024" for the 2024-2025 season."""
+        data = self._get(f"/competitions/{competition_code}/matches", params={"season": season})
         return data.get("matches", [])

@@ -3,9 +3,10 @@ into the `matches` table, keyed by external_id when available, otherwise by
 the natural key (season, competition_code, home_team, away_team, match_date).
 """
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.core.constants import SOURCE_WIKIPEDIA
 from app.ingestion.normalize import MatchIn
 from app.models.match import Match
 
@@ -51,3 +52,21 @@ def upsert_match(db: Session, match_in: MatchIn) -> Match:
     )
     db.add(match)
     return match
+
+
+def delete_wikipedia_rows_for_season(db: Session, season: str, competition_code: str) -> int:
+    """Removes Wikipedia-sourced rows for a (season, competition) before
+    replacing them with football-data.org data. Needed because the two
+    sources give the same real-world match different natural keys (a
+    placeholder season-start date vs. the real kickoff date), so the
+    upsert's natural-key matching can't tell they're the same fixture and
+    would otherwise leave a stale Wikipedia duplicate behind. Returns the
+    number of rows removed, for logging."""
+    result = db.execute(
+        delete(Match).where(
+            Match.season == season,
+            Match.competition_code == competition_code,
+            Match.source == SOURCE_WIKIPEDIA,
+        )
+    )
+    return result.rowcount

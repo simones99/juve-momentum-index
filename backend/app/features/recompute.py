@@ -17,7 +17,7 @@ from app.models.match import Match
 
 
 def _load_matches_chronological(db: Session) -> list[Match]:
-    return list(db.scalars(select(Match).order_by(Match.match_date.asc())))
+    return list(db.scalars(select(Match).order_by(Match.match_date.asc(), Match.id.asc())))
 
 
 def recompute_all_derived(db: Session) -> None:

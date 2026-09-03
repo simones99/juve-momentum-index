@@ -87,24 +87,13 @@ con un volume persistente (`pgdata`) così i dati sopravvivono al rebuild.
 
 Per aggiornare i dati periodicamente: `docker compose run --rm ingest`.
 
-### Risolvere `JUVENTUS_TEAM_ID` (una tantum)
-
-L'ingestion da football-data.org richiede l'id numerico della Juventus:
-
-```bash
-cd backend && python scripts/resolve_team_id.py
-```
-
-Copia il valore stampato in `JUVENTUS_TEAM_ID` nel tuo `.env` (o nelle variabili
-d'ambiente Render).
-
 ## Deploy in produzione
 
 1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per
    `DATABASE_URL` del backend, quella diretta per lanciare le migration Alembic.
 2. **Render**: nuovo Web Service da Docker, root directory `backend/`, health
    check `/healthz`. Configura `DATABASE_URL`, `FOOTBALL_DATA_API_KEY`,
-   `JUVENTUS_TEAM_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+   `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
    `ENABLE_LLM_BRIEF`, `CORS_ORIGINS`, `ADMIN_TOKEN`. Dopo il primo deploy lancia
    l'ingestion una volta via Render Shell.
 3. **Vercel**: importa `frontend/` come root directory, imposta

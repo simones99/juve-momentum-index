@@ -43,7 +43,13 @@ def compute_momentum_series(df: pd.DataFrame) -> pd.DataFrame:
     Returns a copy with elo_normalized, points_rolling5/10, goal_diff_rolling5/10
     and momentum_index columns added.
     """
-    df = df.sort_values("match_date").reset_index(drop=True).copy()
+    # kind="stable" preserves the input row order for ties on match_date
+    # (e.g. Wikipedia-sourced matches sharing a season-start placeholder
+    # date) — pandas' default quicksort is not guaranteed stable, which
+    # would otherwise reorder same-date rows non-deterministically between
+    # runs even though the caller already hands them in a deterministic
+    # (match_date, match_id) order.
+    df = df.sort_values("match_date", kind="stable").reset_index(drop=True).copy()
 
     df["elo_normalized"] = normalize_min_max(df["elo_after"])
     df["points_rolling5"] = rolling_points(df, 5)

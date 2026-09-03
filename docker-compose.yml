@@ -23,7 +23,6 @@ services:
     environment:
       - DATABASE_URL=postgresql+psycopg://juventum:juventum@db:5432/juventum
       - FOOTBALL_DATA_API_KEY=${FOOTBALL_DATA_API_KEY:-}
-      - JUVENTUS_TEAM_ID=${JUVENTUS_TEAM_ID:-}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-4o-mini}
       - ENABLE_LLM_BRIEF=${ENABLE_LLM_BRIEF:-true}
@@ -39,7 +38,6 @@ services:
     environment:
       - DATABASE_URL=postgresql+psycopg://juventum:juventum@db:5432/juventum
       - FOOTBALL_DATA_API_KEY=${FOOTBALL_DATA_API_KEY:-}
-      - JUVENTUS_TEAM_ID=${JUVENTUS_TEAM_ID:-}
     depends_on:
       db:
         condition: service_healthy
