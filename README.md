@@ -1,6 +1,6 @@
 # Juve Momentum Index
 
-![CI](https://github.com/<your-username>/<your-repo>/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/simones99/juve-momentum-index/actions/workflows/ci.yml/badge.svg)
 
 Un **Momentum Index** per la Juventus — un punteggio 0-100 che combina Elo e forma
 recente — esposto in una dashboard con andamento nel tempo, storico partite e una
