@@ -42,7 +42,10 @@ services:
       db:
         condition: service_healthy
     entrypoint: ["./docker-entrypoint.sh"]
-    command: ["python", "-m", "app.ingestion.ingest", "--seasons", "${SEASONS:-2023-2024,2024-2025,2025-2026,2026-2027}"]
+    # No SEASONS set → --seasons "" → ingest.py computes the default itself
+    # (current season + a few prior ones, from today's date), so this never
+    # needs manual bumping as seasons roll forward. Set SEASONS to override.
+    command: ["python", "-m", "app.ingestion.ingest", "--seasons", "${SEASONS:-}"]
     profiles: ["tools"]
 
   frontend:

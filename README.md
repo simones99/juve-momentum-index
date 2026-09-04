@@ -61,7 +61,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env   # compila almeno DATABASE_URL
 alembic upgrade head
-python -m app.ingestion.ingest --seasons 2022-2023,2023-2024,2024-2025
+python -m app.ingestion.ingest   # default: current season + prior ones, computed from today's date
 uvicorn app.main:app --reload
 ```
 

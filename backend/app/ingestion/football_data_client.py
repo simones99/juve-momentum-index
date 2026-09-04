@@ -90,7 +90,14 @@ class FootballDataClient:
                 self._quota_reset_at = time.monotonic() + retry_after
                 time.sleep(retry_after)
                 continue
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                # e.g. 403 for a season outside the free-tier's rolling window —
+                # surfaced as FootballDataError so callers (see ingest.py) can
+                # catch it per (season, competition) and fall back/skip instead
+                # of the whole ingestion run crashing on one out-of-range season.
+                raise FootballDataError(str(exc)) from exc
             return response.json()
         raise FootballDataRateLimitError("football-data.org rate limit exceeded")
 

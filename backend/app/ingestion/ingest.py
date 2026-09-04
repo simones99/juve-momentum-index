@@ -1,14 +1,18 @@
-"""CLI entrypoint: `python -m app.ingestion.ingest --seasons 2022-2023,2023-2024,2024-2025`
+"""CLI entrypoint: `python -m app.ingestion.ingest [--seasons 2023-2024,2024-2025]`
 
 Downloads EVERY match (Serie A + Champions League) for the given seasons via
 football-data.org — not just Juventus' fixtures, so every opponent gets a
 real Elo history instead of starting fresh at 1500 the first time it meets
 Juve — falling back to the Wikipedia scraper (Serie A only) per competition
-if that API call fails, then recomputes elo/momentum.
+if that API call fails, then recomputes elo/momentum. Without `--seasons`,
+defaults to the current season plus a few prior ones (see default_seasons()
+below) computed from today's date, so this never needs manual bumping as
+seasons roll forward.
 """
 
 import argparse
 import logging
+from datetime import date
 
 from sqlalchemy.orm import Session
 
@@ -23,7 +27,31 @@ from app.ingestion.wikipedia_scraper import scrape_serie_a_season
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SEASONS = ["2022-2023", "2023-2024", "2024-2025"]
+DEFAULT_SEASON_LOOKBACK = 3  # + the current season = 4, matching the free tier's known rolling window
+
+
+def _current_season_start_year(today: date | None = None) -> int:
+    """Serie A kicks off mid-August, so treat July onward as "the new season
+    has effectively started" (matches football-data.org's own behavior,
+    which exposes the new season's fixtures ahead of the first matchday)."""
+    today = today or date.today()
+    return today.year if today.month >= 7 else today.year - 1
+
+
+def _season_label(start_year: int) -> str:
+    return f"{start_year}-{start_year + 1}"
+
+
+def default_seasons(lookback: int = DEFAULT_SEASON_LOOKBACK, today: date | None = None) -> list[str]:
+    """Current season plus `lookback` prior ones, computed from today's date
+    instead of a hardcoded list — football-data.org's free tier only serves
+    a rolling ~4-season window, and this keeps requesting the right ones as
+    seasons roll forward each year with no manual maintenance. Requesting a
+    season outside the actual window degrades gracefully (see
+    FootballDataClient._get / update_matches below) rather than failing the
+    whole run, so an exact match to the real window isn't required here."""
+    current = _current_season_start_year(today)
+    return [_season_label(y) for y in range(current - lookback, current + 1)]
 
 
 def _season_start_year(season: str) -> str:
@@ -70,7 +98,7 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
     competition, not just Juventus' fixtures) and persists it to the DB,
     then recomputes elo/momentum for the whole dataset."""
     settings = get_settings()
-    seasons = seasons or DEFAULT_SEASONS
+    seasons = seasons or default_seasons()
     competitions = competitions or SUPPORTED_COMPETITIONS
 
     db: Session = SessionLocal()
@@ -111,11 +139,15 @@ def main() -> None:
     parser.add_argument(
         "--seasons",
         type=str,
-        default=",".join(DEFAULT_SEASONS),
-        help="Comma-separated seasons, e.g. 2022-2023,2023-2024,2024-2025",
+        default="",
+        help=(
+            "Comma-separated seasons, e.g. 2023-2024,2024-2025. "
+            "If omitted, defaults to the current season plus the prior "
+            f"{DEFAULT_SEASON_LOOKBACK}, computed from today's date."
+        ),
     )
     args = parser.parse_args()
-    seasons = [s.strip() for s in args.seasons.split(",") if s.strip()]
+    seasons = [s.strip() for s in args.seasons.split(",") if s.strip()] or None
     update_matches(seasons=seasons)
 
 

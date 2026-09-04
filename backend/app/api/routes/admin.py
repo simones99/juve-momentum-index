@@ -7,7 +7,7 @@ session, since this endpoint is subject to normal HTTP request timeouts.
 from fastapi import APIRouter, Header, HTTPException
 
 from app.config import get_settings
-from app.ingestion.ingest import DEFAULT_SEASONS, update_matches
+from app.ingestion.ingest import default_seasons, update_matches
 
 router = APIRouter(tags=["admin"])
 
@@ -20,6 +20,6 @@ def refresh(x_admin_token: str | None = Header(None), seasons: str | None = None
     if x_admin_token != settings.admin_token:
         raise HTTPException(status_code=401, detail="Invalid admin token")
 
-    season_list = [s.strip() for s in seasons.split(",")] if seasons else DEFAULT_SEASONS
+    season_list = [s.strip() for s in seasons.split(",")] if seasons else default_seasons()
     update_matches(seasons=season_list)
     return {"status": "ok", "seasons": season_list}
