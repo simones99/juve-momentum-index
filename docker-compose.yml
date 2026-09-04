@@ -42,7 +42,7 @@ services:
       db:
         condition: service_healthy
     entrypoint: ["./docker-entrypoint.sh"]
-    command: ["python", "-m", "app.ingestion.ingest", "--seasons", "${SEASONS:-2022-2023,2023-2024,2024-2025}"]
+    command: ["python", "-m", "app.ingestion.ingest", "--seasons", "${SEASONS:-2023-2024,2024-2025,2025-2026,2026-2027}"]
     profiles: ["tools"]
 
   frontend:
@@ -53,6 +53,7 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      - API_INTERNAL_BASE_URL=http://backend:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules

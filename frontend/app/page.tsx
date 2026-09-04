@@ -1,8 +1,10 @@
-import { getMomentumOverview, getSeasons, getUpcomingMatches } from "@/lib/api";
+import { getMomentumOverview, getRecentMatches, getSeasons, getUpcomingMatches } from "@/lib/api";
 import { KpiCard } from "@/components/KpiCard";
 import { SeasonFilter } from "@/components/Filters";
 import { MomentumChart } from "@/components/charts/MomentumChart";
 import { UpcomingMatches } from "@/components/UpcomingMatches";
+import { RecentMatches } from "@/components/RecentMatches";
+import { getDictionary } from "@/lib/i18n/server";
 
 export default async function OverviewPage({
   searchParams,
@@ -10,32 +12,43 @@ export default async function OverviewPage({
   searchParams: Promise<{ season?: string }>;
 }) {
   const params = await searchParams;
-  const [overview, seasons, upcoming] = await Promise.all([
+  const [{ dict }, overview, seasons, recent, upcoming] = await Promise.all([
+    getDictionary(),
     getMomentumOverview(params.season),
     getSeasons(),
-    getUpcomingMatches(3),
+    getRecentMatches(5),
+    getUpcomingMatches(5),
   ]);
 
   const { series, kpi } = overview;
 
   return (
     <>
-      <h1>Overview</h1>
-      <p className="subtitle">Andamento del Momentum Index della Juventus nel tempo.</p>
+      <h1>{dict.nav.overview}</h1>
+      <p className="subtitle">{dict.overview.subtitle}</p>
 
-      <UpcomingMatches matches={upcoming} />
+      <div className="grid-2">
+        <RecentMatches matches={recent} />
+        <UpcomingMatches matches={upcoming} />
+      </div>
 
       <SeasonFilter seasons={seasons} current={params.season} />
 
       <div className="kpi-row">
-        <KpiCard label="Momentum massimo" value={kpi.max_momentum !== null ? kpi.max_momentum.toFixed(1) : "—"} />
-        <KpiCard label="Momentum minimo" value={kpi.min_momentum !== null ? kpi.min_momentum.toFixed(1) : "—"} />
-        <KpiCard label="Serie vittorie più lunga" value={String(kpi.longest_win_streak)} />
-        <KpiCard label="Striscia attuale" value={kpi.current_streak ?? "—"} />
+        <KpiCard
+          label={dict.overview.kpi.maxMomentum}
+          value={kpi.max_momentum !== null ? kpi.max_momentum.toFixed(1) : "—"}
+        />
+        <KpiCard
+          label={dict.overview.kpi.minMomentum}
+          value={kpi.min_momentum !== null ? kpi.min_momentum.toFixed(1) : "—"}
+        />
+        <KpiCard label={dict.overview.kpi.longestWinStreak} value={String(kpi.longest_win_streak)} />
+        <KpiCard label={dict.overview.kpi.currentStreak} value={kpi.current_streak ?? "—"} />
       </div>
 
       <div className="card section">
-        <h2>Momentum Index nel tempo</h2>
+        <h2>{dict.overview.momentumOverTime}</h2>
         <MomentumChart series={series} />
       </div>
     </>

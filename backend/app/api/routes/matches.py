@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.constants import MATCH_STATUS_SCHEDULED, TEAM_NAME
+from app.core.constants import MATCH_STATUS_FINISHED, TEAM_NAME, UPCOMING_MATCH_STATUSES
 from app.db import get_db
 from app.models.match import Match
 from app.schemas.match import MatchListResponse, MatchOut
@@ -84,12 +84,28 @@ def list_upcoming_matches(
         select(Match)
         .where(
             (Match.home_team == TEAM_NAME) | (Match.away_team == TEAM_NAME),
-            Match.status == MATCH_STATUS_SCHEDULED,
+            Match.status.in_(UPCOMING_MATCH_STATUSES),
         )
         .order_by(Match.match_date.asc())
         .limit(limit)
     )
     return [match_to_out(m) for m in db.scalars(stmt)]
+
+
+@router.get("/matches/recent", response_model=list[MatchOut])
+def list_recent_matches(
+    limit: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)
+) -> list[MatchOut]:
+    stmt = (
+        select(Match)
+        .where(
+            (Match.home_team == TEAM_NAME) | (Match.away_team == TEAM_NAME),
+            Match.status == MATCH_STATUS_FINISHED,
+        )
+        .order_by(Match.match_date.desc())
+        .limit(limit)
+    )
+    return [match_to_out(m) for m in db.scalars(stmt)][::-1]
 
 
 @router.get("/matches/{match_id}", response_model=MatchOut)

@@ -8,7 +8,15 @@ import type {
   MomentumPoint,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+// Server-rendered pages run inside the Next.js server process, which — in Docker
+// Compose — is a different container from the browser. There, `localhost` must
+// point at the backend container's Docker network name, not back at itself.
+// `API_INTERNAL_BASE_URL` (server-only, not NEXT_PUBLIC_) covers that case; the
+// browser always uses the public NEXT_PUBLIC_API_BASE_URL.
+const API_BASE_URL =
+  typeof window === "undefined"
+    ? (process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000")
+    : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000");
 
 class ApiError extends Error {
   status: number;
@@ -72,12 +80,16 @@ export function getUpcomingMatches(limit = 5): Promise<MatchOut[]> {
   return apiFetch<MatchOut[]>("/api/v1/matches/upcoming", { limit });
 }
 
-export function getMatchBrief(id: number): Promise<BriefResponse> {
-  return apiFetch<BriefResponse>(`/api/v1/matches/${id}/brief`);
+export function getRecentMatches(limit = 5): Promise<MatchOut[]> {
+  return apiFetch<MatchOut[]>("/api/v1/matches/recent", { limit });
 }
 
-export function getNextMatchBrief(): Promise<BriefResponse> {
-  return apiFetch<BriefResponse>("/api/v1/brief/next");
+export function getMatchBrief(id: number, lang?: string): Promise<BriefResponse> {
+  return apiFetch<BriefResponse>(`/api/v1/matches/${id}/brief`, { lang });
+}
+
+export function getNextMatchBrief(lang?: string): Promise<BriefResponse> {
+  return apiFetch<BriefResponse>("/api/v1/brief/next", { lang });
 }
 
 export function getSeasons(): Promise<string[]> {

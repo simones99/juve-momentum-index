@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.constants import MATCH_STATUS_SCHEDULED, TEAM_NAME
+from app.core.constants import TEAM_NAME, UPCOMING_MATCH_STATUSES
 from app.core.stadiums import STADIUMS
 from app.db import get_db
 from app.features.travel import build_travel_estimate, estimate_fallback_travel
@@ -75,7 +75,7 @@ def away_fixtures(
         select(Match)
         .where(
             Match.away_team == TEAM_NAME,
-            Match.status == MATCH_STATUS_SCHEDULED,
+            Match.status.in_(UPCOMING_MATCH_STATUSES),
             Match.match_date >= func.now(),
         )
         .order_by(Match.match_date.asc())
