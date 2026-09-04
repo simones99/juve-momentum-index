@@ -1,10 +1,14 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 
 from app.core.constants import COMPETITION_SERIE_A, SOURCE_WIKIPEDIA, TEAM_NAME
-from app.ingestion.football_data_client import FootballDataClient
-from app.ingestion.ingest import _ingest_competition_from_football_data
+from app.ingestion.football_data_client import FootballDataClient, FootballDataError
+from app.ingestion.ingest import (
+    _ingest_competition_from_football_data,
+    default_seasons,
+    update_matches,
+)
 from app.models.match import Match
 
 
@@ -86,3 +90,52 @@ def test_football_data_success_replaces_wikipedia_rows_for_that_season(db, monke
     assert len(rows) == 1
     assert rows[0].source == "football-data"
     assert rows[0].external_id == "99"
+
+
+def test_default_seasons_computed_from_todays_date_not_hardcoded():
+    # Matches the real free-tier window observed on 2026-09-04: current
+    # season (2026-2027) plus the 3 prior ones.
+    assert default_seasons(lookback=3, today=date(2026, 9, 4)) == [
+        "2023-2024",
+        "2024-2025",
+        "2025-2026",
+        "2026-2027",
+    ]
+    # Before Serie A's July rollover, "current" is still the previous season.
+    assert default_seasons(lookback=1, today=date(2026, 6, 30)) == ["2024-2025", "2025-2026"]
+    assert default_seasons(lookback=1, today=date(2026, 7, 1)) == ["2025-2026", "2026-2027"]
+
+
+def test_football_data_failure_for_one_season_falls_back_instead_of_crashing_whole_run(db, monkeypatch):
+    # A season outside the free tier's window (or any other football-data.org
+    # failure) must not take down the rest of the ingestion run — Serie A
+    # falls back to Wikipedia per season/competition (see update_matches).
+    # update_matches() opens its own session via SessionLocal() rather than
+    # taking one as a parameter, so it's redirected to the test's `db`
+    # fixture (and its close() neutralized, since the fixture owns that
+    # session's lifecycle) instead of touching the real dev database.
+    monkeypatch.setattr("app.ingestion.ingest.SessionLocal", lambda: db)
+    monkeypatch.setattr(db, "close", lambda: None)
+
+    def _raise_out_of_range(self, code, season):
+        raise FootballDataError("403: season outside free-tier window")
+
+    monkeypatch.setattr(FootballDataClient, "get_competition_matches", _raise_out_of_range)
+    monkeypatch.setattr(
+        "app.ingestion.ingest.scrape_serie_a_season",
+        lambda season: [
+            {
+                "match_date": datetime(2019, 9, 1, tzinfo=timezone.utc),
+                "home_team": TEAM_NAME,
+                "away_team": "SSC Napoli",
+                "home_goals": 1,
+                "away_goals": 0,
+            }
+        ],
+    )
+
+    update_matches(seasons=["2019-2020"], competitions=[COMPETITION_SERIE_A])  # must not raise
+
+    row = db.scalar(select(Match).where(Match.season == "2019-2020"))
+    assert row is not None
+    assert row.source == SOURCE_WIKIPEDIA

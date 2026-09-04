@@ -111,3 +111,77 @@ def test_upcoming_matches_returns_only_scheduled_ordered_by_date_with_venue(clie
     assert body[0]["away_team"] == "Napoli"
     assert body[0]["venue"] == "Stadio Diego Armando Maradona"
     assert body[1]["away_team"] == "Roma"
+
+
+def test_upcoming_matches_includes_timed_status_not_just_scheduled(client, db):
+    # football-data.org marks a fixture TIMED once kickoff time is
+    # confirmed (still SCHEDULED before that) — both are "upcoming, not yet
+    # played". Missing TIMED here means the actual next match gets skipped.
+    db.add(
+        _make_match(
+            external_id="timed-next",
+            away_team="AC Milan",
+            status="TIMED",
+            home_goals=None,
+            away_goals=None,
+            match_date=datetime(2030, 1, 1, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/upcoming")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["away_team"] == "AC Milan"
+    assert body[0]["status"] == "TIMED"
+
+
+def test_recent_matches_returns_only_finished_in_chronological_order(client, db):
+    db.add(
+        _make_match(
+            external_id="oldest",
+            away_team="Roma",
+            match_date=datetime(2023, 8, 1, tzinfo=timezone.utc),
+        )
+    )
+    db.add(
+        _make_match(
+            external_id="newest",
+            away_team="Napoli",
+            match_date=datetime(2023, 9, 1, tzinfo=timezone.utc),
+        )
+    )
+    db.add(
+        _make_match(
+            external_id="not-yet-played",
+            away_team="Milan",
+            status="SCHEDULED",
+            home_goals=None,
+            away_goals=None,
+            match_date=datetime(2030, 1, 1, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/recent", params={"limit": 5})
+    assert response.status_code == 200
+    body = response.json()
+    assert [m["away_team"] for m in body] == ["Roma", "Napoli"]
+    assert all(m["status"] == "FINISHED" for m in body)
+
+
+def test_recent_matches_respects_limit_keeping_the_most_recent(client, db):
+    for i, opponent in enumerate(["Roma", "Napoli", "Milan"]):
+        db.add(
+            _make_match(
+                external_id=f"m{i}",
+                away_team=opponent,
+                match_date=datetime(2023, 8 + i, 1, tzinfo=timezone.utc),
+            )
+        )
+    db.commit()
+
+    response = client.get("/api/v1/matches/recent", params={"limit": 2})
+    body = response.json()
+    assert [m["away_team"] for m in body] == ["Napoli", "Milan"]

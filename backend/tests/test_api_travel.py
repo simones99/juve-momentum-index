@@ -1,7 +1,14 @@
 from datetime import datetime, timedelta, timezone
 
 from app.api.routes import travel as travel_route
-from app.core.constants import COMPETITION_SERIE_A, MATCH_STATUS_FINISHED, MATCH_STATUS_SCHEDULED, SOURCE_FOOTBALL_DATA, TEAM_NAME
+from app.core.constants import (
+    COMPETITION_SERIE_A,
+    MATCH_STATUS_FINISHED,
+    MATCH_STATUS_SCHEDULED,
+    MATCH_STATUS_TIMED,
+    SOURCE_FOOTBALL_DATA,
+    TEAM_NAME,
+)
 from app.ingestion.geocoding import GeocodingError
 from app.ingestion.routing import RoutingError
 from app.models.match import Match
@@ -52,6 +59,22 @@ def test_away_fixtures_only_includes_scheduled_away_matches(client, db, monkeypa
     assert len(body["fixtures"]) == 1
     assert body["fixtures"][0]["opponent"] == "SSC Napoli"
     assert body["from_location"]["display_name"] == "Ancona, Marche, Italia"
+
+
+def test_away_fixtures_includes_timed_status_not_just_scheduled(client, db, monkeypatch):
+    # Same TIMED-vs-SCHEDULED gap as /matches/upcoming: football-data.org
+    # marks a fixture TIMED once kickoff time is confirmed.
+    monkeypatch.setattr(
+        travel_route.NominatimClient, "geocode", lambda self, q: (43.6158, 13.5189, "Ancona, Marche, Italia")
+    )
+    monkeypatch.setattr(travel_route.OsrmClient, "route", lambda self, *a: (300.0, 3.5))
+
+    db.add(_away_match(external_id="timed-away", status=MATCH_STATUS_TIMED))
+    db.commit()
+
+    response = client.get("/api/v1/travel/away-fixtures", params={"from_city": "Ancona"})
+    assert response.status_code == 200
+    assert len(response.json()["fixtures"]) == 1
 
 
 def test_away_fixtures_uses_real_osrm_distance_and_sorts_by_effort(client, db, monkeypatch):
