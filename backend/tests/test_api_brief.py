@@ -59,10 +59,12 @@ def test_match_brief_for_unfinished_match_returns_404(client, db):
     assert response.status_code == 404
 
 
-def test_match_brief_post_match_defaults_to_template_without_api_key(client, db):
+def test_match_brief_post_match_defaults_to_template_without_api_key(client, db, monkeypatch):
     matches = _seed_finished_matches(db)
     recompute_all_derived(db)
     db.commit()
+
+    monkeypatch.setattr(brief_service, "get_settings", lambda: Settings(openrouter_api_key=""))
 
     last_match = matches[-1]
     response = client.get(f"/api/v1/matches/{last_match.id}/brief")
