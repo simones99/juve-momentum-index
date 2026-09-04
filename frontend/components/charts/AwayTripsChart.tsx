@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AwayFixtureOut } from "@/lib/types";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 const WIN = "#34c759";
 const LOSS = "#ff453a";
@@ -9,9 +10,10 @@ const GRID_LINE = "rgba(255, 255, 255, 0.08)";
 const TICK_COLOR = "rgba(245, 245, 247, 0.4)";
 
 export function AwayTripsChart({ fixtures }: { fixtures: AwayFixtureOut[] }) {
+  const { dict } = useLocale();
   const scored = fixtures.filter((f) => f.effort_score !== null);
   if (scored.length === 0) {
-    return <div className="empty-state">Nessuna trasferta con dati di viaggio disponibili.</div>;
+    return <div className="empty-state">{dict.trasferte.noTripDataAvailable}</div>;
   }
 
   const data = [...scored]
@@ -49,8 +51,8 @@ export function AwayTripsChart({ fixtures }: { fixtures: AwayFixtureOut[] }) {
           }}
           labelStyle={{ color: "#f5f5f7" }}
           formatter={(value, _name, item) => [
-            `${value} — ${item.payload.feasible ? "andata/ritorno in giornata" : "richiede pernottamento"}`,
-            "Difficoltà",
+            `${value} — ${item.payload.feasible ? dict.trasferte.feasible : dict.trasferte.notFeasible}`,
+            dict.trasferte.difficultyTitle,
           ]}
         />
         <Bar dataKey="effort" radius={[0, 6, 6, 0]}>

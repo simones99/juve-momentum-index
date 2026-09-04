@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { CompetitionOut } from "@/lib/types";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 function useUpdateParam() {
   const router = useRouter();
@@ -18,10 +19,11 @@ function useUpdateParam() {
 
 export function SeasonFilter({ seasons, current }: { seasons: string[]; current?: string }) {
   const updateParam = useUpdateParam();
+  const { dict } = useLocale();
   return (
     <div className="filters">
       <select value={current ?? ""} onChange={(e) => updateParam("season", e.target.value)}>
-        <option value="">Tutte le stagioni</option>
+        <option value="">{dict.common.allSeasons}</option>
         {seasons.map((s) => (
           <option key={s} value={s}>
             {s}
@@ -42,11 +44,12 @@ export function MatchFilters({
   current: { season?: string; competition?: string; home_away?: string; result?: string; opponent?: string };
 }) {
   const updateParam = useUpdateParam();
+  const { dict } = useLocale();
 
   return (
     <div className="filters">
       <select value={current.season ?? ""} onChange={(e) => updateParam("season", e.target.value)}>
-        <option value="">Tutte le stagioni</option>
+        <option value="">{dict.common.allSeasons}</option>
         {seasons.map((s) => (
           <option key={s} value={s}>
             {s}
@@ -54,7 +57,7 @@ export function MatchFilters({
         ))}
       </select>
       <select value={current.competition ?? ""} onChange={(e) => updateParam("competition", e.target.value)}>
-        <option value="">Tutte le competizioni</option>
+        <option value="">{dict.common.allCompetitions}</option>
         {competitions.map((c) => (
           <option key={c.code} value={c.code}>
             {c.name}
@@ -62,19 +65,19 @@ export function MatchFilters({
         ))}
       </select>
       <select value={current.home_away ?? ""} onChange={(e) => updateParam("home_away", e.target.value)}>
-        <option value="">Casa/Trasferta</option>
-        <option value="H">Casa</option>
-        <option value="A">Trasferta</option>
+        <option value="">{dict.momentum.homeAwaySelect}</option>
+        <option value="H">{dict.common.home}</option>
+        <option value="A">{dict.common.away}</option>
       </select>
       <select value={current.result ?? ""} onChange={(e) => updateParam("result", e.target.value)}>
-        <option value="">Tutti i risultati</option>
-        <option value="W">Vittoria</option>
-        <option value="D">Pareggio</option>
-        <option value="L">Sconfitta</option>
+        <option value="">{dict.matches.filters.allResults}</option>
+        <option value="W">{dict.matches.filters.win}</option>
+        <option value="D">{dict.matches.filters.draw}</option>
+        <option value="L">{dict.matches.filters.loss}</option>
       </select>
       <input
         type="text"
-        placeholder="Avversario"
+        placeholder={dict.matches.filters.opponentPlaceholder}
         defaultValue={current.opponent ?? ""}
         onBlur={(e) => updateParam("opponent", e.target.value)}
       />

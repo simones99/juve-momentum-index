@@ -1,32 +1,36 @@
 import { TEAM_NAME } from "@/lib/constants";
 import type { MatchOut } from "@/lib/types";
+import { getDictionary } from "@/lib/i18n/server";
 
-function formatDateTime(iso: string): { date: string; time: string } {
+function formatDateTime(iso: string, locale: string): { date: string; time: string } {
   const d = new Date(iso);
+  const intlLocale = locale === "en" ? "en-GB" : "it-IT";
   return {
-    date: d.toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" }),
-    time: d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+    date: d.toLocaleDateString(intlLocale, { weekday: "short", day: "2-digit", month: "short" }),
+    time: d.toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" }),
   };
 }
 
-export function UpcomingMatches({ matches }: { matches: MatchOut[] }) {
+export async function UpcomingMatches({ matches }: { matches: MatchOut[] }) {
+  const { locale, dict } = await getDictionary();
+
   if (matches.length === 0) {
     return (
       <div className="card section">
-        <h2>Prossime partite</h2>
-        <div className="empty-state">Nessuna partita in programma nel dataset al momento.</div>
+        <h2>{dict.upcomingMatches.title}</h2>
+        <div className="empty-state">{dict.upcomingMatches.emptyState}</div>
       </div>
     );
   }
 
   return (
     <div className="card section">
-      <h2>Prossime partite</h2>
+      <h2>{dict.upcomingMatches.title}</h2>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {matches.map((m, i) => {
           const opponent = m.home_team === TEAM_NAME ? m.away_team : m.home_team;
-          const homeAway = m.home_team === TEAM_NAME ? "Casa" : "Trasferta";
-          const { date, time } = formatDateTime(m.match_date);
+          const homeAway = m.home_team === TEAM_NAME ? dict.common.home : dict.common.away;
+          const { date, time } = formatDateTime(m.match_date, locale);
           return (
             <div
               key={m.id}
@@ -49,7 +53,7 @@ export function UpcomingMatches({ matches }: { matches: MatchOut[] }) {
                   {date} · {time}
                 </span>
                 <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                  {m.venue ?? "Sede da confermare"}
+                  {m.venue ?? dict.upcomingMatches.venueTbd}
                 </span>
               </div>
             </div>

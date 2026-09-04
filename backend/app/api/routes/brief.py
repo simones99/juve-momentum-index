@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.briefs.service import get_post_match_brief, get_pre_match_brief
-from app.core.constants import MATCH_STATUS_FINISHED, MATCH_STATUS_SCHEDULED, TEAM_NAME
+from app.core.constants import MATCH_STATUS_FINISHED, TEAM_NAME, UPCOMING_MATCH_STATUSES
 from app.db import get_db
 from app.models.match import Match
 from app.schemas.brief import BriefResponse
@@ -13,7 +13,10 @@ router = APIRouter(tags=["brief"])
 
 @router.get("/matches/{match_id}/brief", response_model=BriefResponse)
 def match_brief(
-    match_id: int, n: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)
+    match_id: int,
+    n: int = Query(5, ge=1, le=20),
+    lang: str = Query("it", pattern="^(it|en)$"),
+    db: Session = Depends(get_db),
 ) -> BriefResponse:
     match = db.get(Match, match_id)
     if match is None:
@@ -24,18 +27,22 @@ def match_brief(
             detail="Match not finished yet; use /brief/next for upcoming fixtures",
         )
     try:
-        return get_post_match_brief(db, match_id, n)
+        return get_post_match_brief(db, match_id, n, lang)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/brief/next", response_model=BriefResponse)
-def next_match_brief(n: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)) -> BriefResponse:
+def next_match_brief(
+    n: int = Query(5, ge=1, le=20),
+    lang: str = Query("it", pattern="^(it|en)$"),
+    db: Session = Depends(get_db),
+) -> BriefResponse:
     stmt = (
         select(Match)
         .where(
             (Match.home_team == TEAM_NAME) | (Match.away_team == TEAM_NAME),
-            Match.status == MATCH_STATUS_SCHEDULED,
+            Match.status.in_(UPCOMING_MATCH_STATUSES),
         )
         .order_by(Match.match_date.asc())
         .limit(1)
@@ -46,4 +53,4 @@ def next_match_brief(n: int = Query(5, ge=1, le=20), db: Session = Depends(get_d
     if next_match:
         is_home = next_match.home_team == TEAM_NAME
         opponent = next_match.away_team if is_home else next_match.home_team
-    return get_pre_match_brief(db, opponent, n, is_home)
+    return get_pre_match_brief(db, opponent, n, is_home, lang)

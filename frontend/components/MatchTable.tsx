@@ -3,34 +3,40 @@
 import { useRouter } from "next/navigation";
 import type { MatchOut } from "@/lib/types";
 import { ResultBadge } from "./ResultBadge";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale === "en" ? "en-GB" : "it-IT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function MatchTable({ matches }: { matches: MatchOut[] }) {
   const router = useRouter();
+  const { locale, dict } = useLocale();
 
   if (matches.length === 0) {
-    return <div className="empty-state">Nessuna partita trovata con questi filtri.</div>;
+    return <div className="empty-state">{dict.matches.emptyState}</div>;
   }
 
   return (
     <table>
       <thead>
         <tr>
-          <th>Data</th>
-          <th>Competizione</th>
-          <th>Casa</th>
-          <th>Trasferta</th>
-          <th>Risultato</th>
-          <th>Esito</th>
+          <th>{dict.matches.table.date}</th>
+          <th>{dict.matches.table.competition}</th>
+          <th>{dict.matches.table.home}</th>
+          <th>{dict.matches.table.away}</th>
+          <th>{dict.matches.table.result}</th>
+          <th>{dict.matches.table.outcome}</th>
         </tr>
       </thead>
       <tbody>
         {matches.map((m) => (
           <tr key={m.id} onClick={() => router.push(`/matches/${m.id}`)}>
-            <td>{formatDate(m.match_date)}</td>
+            <td>{formatDate(m.match_date, locale)}</td>
             <td>{m.competition_code}</td>
             <td>{m.home_team}</td>
             <td>{m.away_team}</td>

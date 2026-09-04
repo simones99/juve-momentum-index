@@ -9,8 +9,14 @@ from app.models.juve_momentum import JuveMomentum
 from app.schemas.brief import BriefData
 
 RESULT_POINTS = {"W": 3, "D": 1, "L": 0}
-RESULT_LABELS_IT = {"W": "vinto", "D": "pareggiato", "L": "perso"}
-TREND_LABELS_IT = {"up": "in crescita", "down": "in calo", "flat": "stabile"}
+RESULT_LABELS = {
+    "it": {"W": "vinto", "D": "pareggiato", "L": "perso"},
+    "en": {"W": "won", "D": "drawn", "L": "lost"},
+}
+TREND_LABELS = {
+    "it": {"up": "in crescita", "down": "in calo", "flat": "stabile"},
+    "en": {"up": "rising", "down": "falling", "flat": "stable"},
+}
 
 
 def _current_elo(db: Session, team: str) -> float:
@@ -51,7 +57,7 @@ def _elo_trend(elos: list[float]) -> str:
     return "flat"
 
 
-def _head_to_head(db: Session, opponent: str, n: int = 5) -> str | None:
+def _head_to_head(db: Session, opponent: str, n: int = 5, lang: str = "it") -> str | None:
     rows = list(
         db.scalars(
             select(JuveMomentum)
@@ -65,11 +71,13 @@ def _head_to_head(db: Session, opponent: str, n: int = 5) -> str | None:
     wins = sum(1 for r in rows if r.result == "W")
     draws = sum(1 for r in rows if r.result == "D")
     losses = sum(1 for r in rows if r.result == "L")
+    if lang == "en":
+        return f"{wins}W-{draws}D-{losses}L in the last {len(rows)} meetings"
     return f"{wins}V-{draws}N-{losses}P nelle ultime {len(rows)} sfide"
 
 
 def build_pre_match_brief_data(
-    db: Session, opponent: str | None, n: int = 5, is_home: bool = True
+    db: Session, opponent: str | None, n: int = 5, is_home: bool = True, lang: str = "it"
 ) -> BriefData:
     """Uses the last N played matches (any opponent) to describe current form.
     `is_home` says whether the upcoming fixture has Juventus at home — it
@@ -103,14 +111,14 @@ def build_pre_match_brief_data(
         avg_points=avg_points,
         avg_goal_diff=avg_goal_diff,
         elo_trend=elo_trend,
-        head_to_head_recent=_head_to_head(db, opponent) if opponent else None,
+        head_to_head_recent=_head_to_head(db, opponent, lang=lang) if opponent else None,
         win_probability=win_probability,
         draw_probability=draw_probability,
         loss_probability=loss_probability,
     )
 
 
-def build_post_match_brief_data(db: Session, match_id: int, n: int = 5) -> BriefData:
+def build_post_match_brief_data(db: Session, match_id: int, n: int = 5, lang: str = "it") -> BriefData:
     """`avg_points`/`avg_goal_diff` reuse the stored rolling-5 baseline
     (form GOING INTO this match), so the brief can say whether today's
     performance was above or below recent form."""
@@ -140,20 +148,32 @@ def build_post_match_brief_data(db: Session, match_id: int, n: int = 5) -> Brief
         goals_against=row.goals_against,
         elo_before=float(row.elo_before),
         elo_after=float(row.elo_after),
-        head_to_head_recent=_head_to_head(db, row.opponent, n),
+        head_to_head_recent=_head_to_head(db, row.opponent, n, lang=lang),
         win_probability=win_probability,
         draw_probability=draw_probability,
         loss_probability=loss_probability,
     )
 
 
-def render_template_text(data: BriefData) -> list[str]:
+def render_template_text(data: BriefData, lang: str = "it") -> list[str]:
     if data.kind == "pre":
-        return _render_pre_match(data)
-    return _render_post_match(data)
+        return _render_pre_match(data, lang)
+    return _render_post_match(data, lang)
 
 
-def _render_pre_match(data: BriefData) -> list[str]:
+def _render_pre_match(data: BriefData, lang: str = "it") -> list[str]:
+    if lang == "en":
+        return _render_pre_match_en(data)
+    return _render_pre_match_it(data)
+
+
+def _render_post_match(data: BriefData, lang: str = "it") -> list[str]:
+    if lang == "en":
+        return _render_post_match_en(data)
+    return _render_post_match_it(data)
+
+
+def _render_pre_match_it(data: BriefData) -> list[str]:
     opponent_str = f" contro {data.opponent}" if data.opponent else ""
     if data.matches_considered == 0:
         return [f"Nessun dato storico disponibile per generare un brief pre-partita{opponent_str}."]
@@ -162,7 +182,7 @@ def _render_pre_match(data: BriefData) -> list[str]:
         f"La Juve arriva alla prossima partita{opponent_str} con un Momentum Index medio di "
         f"{data.avg_momentum:.1f}/100 nelle ultime {data.matches_considered} partite.",
         f"Media di {data.avg_points:.2f} punti a partita e differenza reti media di "
-        f"{data.avg_goal_diff:+.2f}, con un trend Elo {TREND_LABELS_IT[data.elo_trend]}.",
+        f"{data.avg_goal_diff:+.2f}, con un trend Elo {TREND_LABELS['it'][data.elo_trend]}.",
     ]
     if data.head_to_head_recent:
         lines.append(f"Precedenti recenti contro {data.opponent}: {data.head_to_head_recent}.")
@@ -174,9 +194,30 @@ def _render_pre_match(data: BriefData) -> list[str]:
     return lines
 
 
-def _render_post_match(data: BriefData) -> list[str]:
+def _render_pre_match_en(data: BriefData) -> list[str]:
+    opponent_str = f" against {data.opponent}" if data.opponent else ""
+    if data.matches_considered == 0:
+        return [f"No historical data available to generate a pre-match brief{opponent_str}."]
+
     lines = [
-        f"La Juve ha {RESULT_LABELS_IT[data.result]} {data.goals_for}-{data.goals_against} contro "
+        f"Juve go into the next match{opponent_str} with an average Momentum Index of "
+        f"{data.avg_momentum:.1f}/100 over the last {data.matches_considered} matches.",
+        f"Averaging {data.avg_points:.2f} points per match and a goal difference of "
+        f"{data.avg_goal_diff:+.2f}, with an Elo trend that is {TREND_LABELS['en'][data.elo_trend]}.",
+    ]
+    if data.head_to_head_recent:
+        lines.append(f"Recent head-to-head against {data.opponent}: {data.head_to_head_recent}.")
+    if data.win_probability is not None:
+        lines.append(
+            f"According to the Elo model: Juve {data.win_probability * 100:.0f}%, draw "
+            f"{data.draw_probability * 100:.0f}%, {data.opponent} {data.loss_probability * 100:.0f}%."
+        )
+    return lines
+
+
+def _render_post_match_it(data: BriefData) -> list[str]:
+    lines = [
+        f"La Juve ha {RESULT_LABELS['it'][data.result]} {data.goals_for}-{data.goals_against} contro "
         f"{data.opponent}, con l'Elo che passa da {data.elo_before:.0f} a {data.elo_after:.0f}.",
         f"Momentum Index della partita: {data.avg_momentum:.1f}/100.",
     ]
@@ -193,4 +234,26 @@ def _render_post_match(data: BriefData) -> list[str]:
             data.result
         ]
         lines.append(f"Il modello Elo dava questo esito al {predicted * 100:.0f}% prima del fischio d'inizio.")
+    return lines
+
+
+def _render_post_match_en(data: BriefData) -> list[str]:
+    lines = [
+        f"Juve {RESULT_LABELS['en'][data.result]} {data.goals_for}-{data.goals_against} against "
+        f"{data.opponent}, with Elo moving from {data.elo_before:.0f} to {data.elo_after:.0f}.",
+        f"Match Momentum Index: {data.avg_momentum:.1f}/100.",
+    ]
+    if data.avg_points is not None and data.avg_goal_diff is not None:
+        lines.append(
+            f"Going into this match the recent-form average was {data.avg_points:.2f} points "
+            f"and a goal difference of {data.avg_goal_diff:+.2f}: today's performance should be "
+            "read against that baseline."
+        )
+    if data.head_to_head_recent:
+        lines.append(f"Recent head-to-head against {data.opponent}: {data.head_to_head_recent}.")
+    if data.win_probability is not None:
+        predicted = {"W": data.win_probability, "D": data.draw_probability, "L": data.loss_probability}[
+            data.result
+        ]
+        lines.append(f"The Elo model gave this outcome a {predicted * 100:.0f}% chance before kickoff.")
     return lines

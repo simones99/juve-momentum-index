@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import { ApiError, getAwayFixtures } from "@/lib/api";
 import type { AwayFixtureOut, AwayFixturesResponse } from "@/lib/types";
 import { AwayTripsChart } from "@/components/charts/AwayTripsChart";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 type SortKey = "match_date" | "distance_km" | "effort_score";
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("it-IT", {
+function formatDateTime(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale === "en" ? "en-GB" : "it-IT", {
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -18,6 +19,7 @@ function formatDateTime(iso: string): string {
 }
 
 export function TrasferteExplorer() {
+  const { locale, dict } = useLocale();
   const [city, setCity] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function TrasferteExplorer() {
       setResult(data);
     } catch (err) {
       setResult(null);
-      setError(err instanceof ApiError ? err.message : "Errore imprevisto durante la ricerca.");
+      setError(err instanceof ApiError ? err.message : dict.trasferte.errorGeneric);
     } finally {
       setLoading(false);
     }
@@ -64,13 +66,13 @@ export function TrasferteExplorer() {
       <form onSubmit={handleSearch} className="filters" style={{ marginBottom: 20 }}>
         <input
           type="text"
-          placeholder="Città di partenza (es. Ancona)"
+          placeholder={dict.trasferte.searchPlaceholder}
           value={city}
           onChange={(e) => setCity(e.target.value)}
           style={{ minWidth: 240 }}
         />
         <button type="submit" disabled={loading}>
-          {loading ? "Cerco…" : "Cerca"}
+          {loading ? dict.trasferte.searchingButton : dict.trasferte.searchButton}
         </button>
       </form>
 
@@ -80,27 +82,21 @@ export function TrasferteExplorer() {
         </div>
       )}
 
-      {!result && !error && !loading && (
-        <div className="empty-state">
-          Inserisci una città per vedere le prossime trasferte della Juve ordinate per difficoltà.
-        </div>
-      )}
+      {!result && !error && !loading && <div className="empty-state">{dict.trasferte.promptEmptyState}</div>}
 
       {result && (
         <>
           <p className="subtitle">
-            Partenza: {result.from_location.display_name} — {result.fixtures.length} trasferte in programma
+            {dict.trasferte.departureLabel(result.from_location.display_name)} —{" "}
+            {dict.trasferte.tripsCountLabel(result.fixtures.length)}
           </p>
 
           {result.fixtures.length === 0 ? (
-            <div className="empty-state">
-              Nessuna trasferta programmata nel dataset al momento (serve un&apos;ingestion con calendario
-              reale — vedi README).
-            </div>
+            <div className="empty-state">{dict.trasferte.noTripsScheduled}</div>
           ) : (
             <>
               <div className="card section">
-                <h2>Difficoltà per trasferta</h2>
+                <h2>{dict.trasferte.difficultyTitle}</h2>
                 <AwayTripsChart fixtures={result.fixtures} />
               </div>
 
@@ -109,24 +105,24 @@ export function TrasferteExplorer() {
                   <thead>
                     <tr>
                       <th onClick={() => toggleSort("match_date")} style={{ cursor: "pointer" }}>
-                        Data {sortKey === "match_date" ? (sortAsc ? "↑" : "↓") : ""}
+                        {dict.trasferte.table.date} {sortKey === "match_date" ? (sortAsc ? "↑" : "↓") : ""}
                       </th>
-                      <th>Avversario</th>
-                      <th>Stadio</th>
+                      <th>{dict.trasferte.table.opponent}</th>
+                      <th>{dict.trasferte.table.stadium}</th>
                       <th onClick={() => toggleSort("distance_km")} style={{ cursor: "pointer" }}>
-                        Distanza {sortKey === "distance_km" ? (sortAsc ? "↑" : "↓") : ""}
+                        {dict.trasferte.table.distance} {sortKey === "distance_km" ? (sortAsc ? "↑" : "↓") : ""}
                       </th>
-                      <th>Durata viaggio</th>
+                      <th>{dict.trasferte.table.travelDuration}</th>
                       <th onClick={() => toggleSort("effort_score")} style={{ cursor: "pointer" }}>
-                        Difficoltà {sortKey === "effort_score" ? (sortAsc ? "↑" : "↓") : ""}
+                        {dict.trasferte.table.difficulty} {sortKey === "effort_score" ? (sortAsc ? "↑" : "↓") : ""}
                       </th>
-                      <th>Giornata?</th>
+                      <th>{dict.trasferte.table.dayTrip}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedFixtures.map((f) => (
                       <tr key={f.match_id}>
-                        <td>{formatDateTime(f.match_date)}</td>
+                        <td>{formatDateTime(f.match_date, locale)}</td>
                         <td>{f.opponent}</td>
                         <td>
                           {f.stadium ?? "—"}
@@ -135,7 +131,7 @@ export function TrasferteExplorer() {
                         <td>{f.distance_km !== null ? `${Math.round(f.distance_km)} km` : "—"}</td>
                         <td>
                           {f.duration_hours !== null
-                            ? `${f.duration_hours.toFixed(1)} h${f.is_estimated ? " (stima)" : ""}`
+                            ? `${f.duration_hours.toFixed(1)} h${f.is_estimated ? dict.trasferte.estimateSuffix : ""}`
                             : "—"}
                         </td>
                         <td>{f.effort_score !== null ? Math.round(f.effort_score) : "—"}</td>
@@ -143,9 +139,9 @@ export function TrasferteExplorer() {
                           {f.day_trip_feasible === null ? (
                             "—"
                           ) : f.day_trip_feasible ? (
-                            <span className="badge badge--W">Sì</span>
+                            <span className="badge badge--W">{dict.trasferte.yes}</span>
                           ) : (
-                            <span className="badge badge--L">No</span>
+                            <span className="badge badge--L">{dict.trasferte.no}</span>
                           )}
                         </td>
                       </tr>
@@ -155,10 +151,7 @@ export function TrasferteExplorer() {
               </div>
 
               <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 12 }}>
-                Stima indicativa basata su distanza/tempo di guida in auto e orario della partita — non tiene
-                conto di orari treni, traffico reale o eventi. &quot;Giornata&quot; = presumibilmente
-                fattibile andata e ritorno in giornata partendo non prima delle 4:00 e rientrando entro le
-                2:00 di notte.
+                {dict.trasferte.disclaimer}
               </p>
             </>
           )}

@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import { ApiError, getMatch, getMatchBrief } from "@/lib/api";
 import { MatchBriefCard } from "@/components/MatchBriefCard";
 import { ResultBadge } from "@/components/ResultBadge";
+import { getDictionary } from "@/lib/i18n/server";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("it-IT", {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale === "en" ? "en-GB" : "it-IT", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -16,6 +17,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const matchId = Number(id);
   if (Number.isNaN(matchId)) notFound();
 
+  const { locale, dict } = await getDictionary();
+
   let match;
   try {
     match = await getMatch(matchId);
@@ -25,7 +28,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   }
 
   const isFinished = match.status === "FINISHED";
-  const brief = isFinished ? await getMatchBrief(matchId).catch(() => null) : null;
+  const brief = isFinished ? await getMatchBrief(matchId, locale).catch(() => null) : null;
 
   return (
     <>
@@ -33,7 +36,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         {match.home_team} {match.home_goals ?? "-"}-{match.away_goals ?? "-"} {match.away_team}
       </h1>
       <p className="subtitle">
-        {formatDate(match.match_date)} · {match.competition} · {match.season}
+        {formatDate(match.match_date, locale)} · {match.competition} · {match.season}
         {match.venue ? ` · ${match.venue}` : ""}{" "}
         {match.result && <ResultBadge result={match.result} />}
       </p>
@@ -42,9 +45,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         <MatchBriefCard brief={brief} />
       ) : (
         <div className="card empty-state">
-          {isFinished
-            ? "Brief non ancora disponibile per questa partita."
-            : "Partita non ancora giocata: consulta il Brief pre-partita nella sezione dedicata."}
+          {isFinished ? dict.matchDetail.briefNotAvailable : dict.matchDetail.matchNotPlayedYet}
         </div>
       )}
     </>

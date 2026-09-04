@@ -14,7 +14,7 @@ from app.schemas.brief import BriefData, BriefResponse
 logger = logging.getLogger(__name__)
 
 
-def _llm_enhance(data: BriefData, template_lines: list[str]) -> tuple[str | None, str | None]:
+def _llm_enhance(data: BriefData, template_lines: list[str], lang: str) -> tuple[str | None, str | None]:
     settings = get_settings()
     if not (settings.enable_llm_brief and settings.openrouter_api_key):
         return None, None
@@ -25,14 +25,14 @@ def _llm_enhance(data: BriefData, template_lines: list[str]) -> tuple[str | None
         timeout=settings.llm_timeout_seconds,
     )
     try:
-        return client.generate_brief_text(data, template_lines), None
+        return client.generate_brief_text(data, template_lines, lang), None
     except OpenRouterError as exc:
         logger.warning("OpenRouter brief generation failed, falling back to template: %s", exc)
         return None, str(exc)
 
 
-def _to_response(data: BriefData, template_lines: list[str]) -> BriefResponse:
-    llm_text, llm_error = _llm_enhance(data, template_lines)
+def _to_response(data: BriefData, template_lines: list[str], lang: str) -> BriefResponse:
+    llm_text, llm_error = _llm_enhance(data, template_lines, lang)
     return BriefResponse(
         data=data,
         template_text=template_lines,
@@ -43,12 +43,12 @@ def _to_response(data: BriefData, template_lines: list[str]) -> BriefResponse:
 
 
 def get_pre_match_brief(
-    db: Session, opponent: str | None, n: int = 5, is_home: bool = True
+    db: Session, opponent: str | None, n: int = 5, is_home: bool = True, lang: str = "it"
 ) -> BriefResponse:
-    data = build_pre_match_brief_data(db, opponent, n, is_home)
-    return _to_response(data, render_template_text(data))
+    data = build_pre_match_brief_data(db, opponent, n, is_home, lang)
+    return _to_response(data, render_template_text(data, lang), lang)
 
 
-def get_post_match_brief(db: Session, match_id: int, n: int = 5) -> BriefResponse:
-    data = build_post_match_brief_data(db, match_id, n)
-    return _to_response(data, render_template_text(data))
+def get_post_match_brief(db: Session, match_id: int, n: int = 5, lang: str = "it") -> BriefResponse:
+    data = build_post_match_brief_data(db, match_id, n, lang)
+    return _to_response(data, render_template_text(data, lang), lang)

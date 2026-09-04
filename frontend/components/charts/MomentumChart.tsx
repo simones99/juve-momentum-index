@@ -2,22 +2,25 @@
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MomentumPoint } from "@/lib/types";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 const ACCENT = "#cdb079";
 const GRID_LINE = "rgba(255, 255, 255, 0.08)";
 const TICK_COLOR = "rgba(245, 245, 247, 0.4)";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale === "en" ? "en-GB" : "it-IT", { day: "2-digit", month: "short" });
 }
 
 export function MomentumChart({ series }: { series: MomentumPoint[] }) {
+  const { locale, dict } = useLocale();
+
   if (series.length === 0) {
-    return <div className="empty-state">Nessun dato disponibile per questa selezione.</div>;
+    return <div className="empty-state">{dict.common.noDataForSelection}</div>;
   }
 
   const data = series.map((p) => ({
-    date: formatDate(p.match_date),
+    date: formatDate(p.match_date, locale),
     opponent: p.opponent,
     momentum: Math.round(p.momentum_index * 10) / 10,
   }));

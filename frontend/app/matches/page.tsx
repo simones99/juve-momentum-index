@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCompetitions, getMatches, getSeasons } from "@/lib/api";
 import { MatchFilters } from "@/components/Filters";
 import { MatchTable } from "@/components/MatchTable";
+import { getDictionary } from "@/lib/i18n/server";
 
 const PAGE_SIZE = 20;
 
@@ -20,7 +21,8 @@ export default async function MatchesPage({
   const sp = await searchParams;
   const page = Number(sp.page ?? "1") || 1;
 
-  const [matches, seasons, competitions] = await Promise.all([
+  const [{ dict }, matches, seasons, competitions] = await Promise.all([
+    getDictionary(),
     getMatches({
       season: sp.season,
       competition: sp.competition,
@@ -49,8 +51,8 @@ export default async function MatchesPage({
 
   return (
     <>
-      <h1>Matches</h1>
-      <p className="subtitle">Tutte le partite della Juventus nel dataset ({matches.total} totali).</p>
+      <h1>{dict.nav.matches}</h1>
+      <p className="subtitle">{dict.matches.subtitle(matches.total)}</p>
 
       <MatchFilters
         seasons={seasons}
@@ -70,11 +72,11 @@ export default async function MatchesPage({
 
       {totalPages > 1 && (
         <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "center" }}>
-          {page > 1 && <Link href={buildPageHref(page - 1)}>&larr; Precedente</Link>}
+          {page > 1 && <Link href={buildPageHref(page - 1)}>{dict.matches.pagination.previous}</Link>}
           <span className="subtitle" style={{ margin: 0 }}>
-            Pagina {page} di {totalPages}
+            {dict.matches.pagination.pageOf(page, totalPages)}
           </span>
-          {page < totalPages && <Link href={buildPageHref(page + 1)}>Successiva &rarr;</Link>}
+          {page < totalPages && <Link href={buildPageHref(page + 1)}>{dict.matches.pagination.next}</Link>}
         </div>
       )}
     </>

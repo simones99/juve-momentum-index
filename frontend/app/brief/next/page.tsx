@@ -1,18 +1,19 @@
 import { ApiError, getNextMatchBrief } from "@/lib/api";
 import { MatchBriefCard } from "@/components/MatchBriefCard";
+import { getDictionary } from "@/lib/i18n/server";
 
 export default async function NextMatchBriefPage() {
+  const { locale, dict } = await getDictionary();
+
   let brief;
   try {
-    brief = await getNextMatchBrief();
+    brief = await getNextMatchBrief(locale);
   } catch (err) {
     if (err instanceof ApiError) {
       return (
         <>
-          <h1>Match Brief</h1>
-          <div className="card empty-state">
-            Nessuna partita programmata trovata nel dataset al momento.
-          </div>
+          <h1>{dict.brief.title}</h1>
+          <div className="card empty-state">{dict.brief.noBriefFound}</div>
         </>
       );
     }
@@ -21,8 +22,8 @@ export default async function NextMatchBriefPage() {
 
   return (
     <>
-      <h1>Match Brief</h1>
-      <p className="subtitle">Anteprima basata sulle ultime partite della Juventus.</p>
+      <h1>{dict.brief.title}</h1>
+      <p className="subtitle">{dict.brief.subtitle}</p>
       <MatchBriefCard brief={brief} />
     </>
   );

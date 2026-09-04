@@ -1,9 +1,14 @@
 import { getCompetitions, getMomentumSeries, getSeasons } from "@/lib/api";
 import { EloMomentumChart } from "@/components/charts/EloMomentumChart";
 import { ResultBadge } from "@/components/ResultBadge";
+import { getDictionary } from "@/lib/i18n/server";
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleDateString(locale === "en" ? "en-GB" : "it-IT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default async function MomentumDetailsPage({
@@ -18,7 +23,8 @@ export default async function MomentumDetailsPage({
   }>;
 }) {
   const params = await searchParams;
-  const [series, seasons, competitions] = await Promise.all([
+  const [{ locale, dict }, series, seasons, competitions] = await Promise.all([
+    getDictionary(),
     getMomentumSeries({
       season: params.season,
       competition: params.competition,
@@ -35,12 +41,12 @@ export default async function MomentumDetailsPage({
 
   return (
     <>
-      <h1>Momentum Details</h1>
-      <p className="subtitle">Elo, forma recente e Momentum Index partita per partita.</p>
+      <h1>{dict.nav.momentumDetails}</h1>
+      <p className="subtitle">{dict.momentum.subtitle}</p>
 
       <form method="GET" className="filters">
         <select name="season" defaultValue={params.season ?? ""}>
-          <option value="">Tutte le stagioni</option>
+          <option value="">{dict.common.allSeasons}</option>
           {seasons.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -48,7 +54,7 @@ export default async function MomentumDetailsPage({
           ))}
         </select>
         <select name="competition" defaultValue={params.competition ?? ""}>
-          <option value="">Tutte le competizioni</option>
+          <option value="">{dict.common.allCompetitions}</option>
           {competitions.map((c) => (
             <option key={c.code} value={c.code}>
               {c.name}
@@ -56,40 +62,40 @@ export default async function MomentumDetailsPage({
           ))}
         </select>
         <select name="home_away" defaultValue={params.home_away ?? ""}>
-          <option value="">Casa/Trasferta</option>
-          <option value="H">Casa</option>
-          <option value="A">Trasferta</option>
+          <option value="">{dict.momentum.homeAwaySelect}</option>
+          <option value="H">{dict.common.home}</option>
+          <option value="A">{dict.common.away}</option>
         </select>
-        <button type="submit">Filtra</button>
+        <button type="submit">{dict.common.filter}</button>
       </form>
 
       <div className="card section">
-        <h2>Elo vs Momentum Index</h2>
+        <h2>{dict.momentum.eloVsMomentum}</h2>
         <EloMomentumChart series={filtered} />
       </div>
 
       <div className="card">
-        <h2>Dettaglio partite</h2>
+        <h2>{dict.momentum.matchDetailTitle}</h2>
         {filtered.length === 0 ? (
-          <div className="empty-state">Nessun dato per questa selezione.</div>
+          <div className="empty-state">{dict.momentum.emptyState}</div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Avversario</th>
-                <th>C/T</th>
-                <th>Esito</th>
-                <th>Elo prima → dopo</th>
-                <th>Momentum</th>
+                <th>{dict.momentum.table.date}</th>
+                <th>{dict.momentum.table.opponent}</th>
+                <th>{dict.momentum.table.homeAway}</th>
+                <th>{dict.momentum.table.result}</th>
+                <th>{dict.momentum.table.eloBeforeAfter}</th>
+                <th>{dict.momentum.table.momentum}</th>
               </tr>
             </thead>
             <tbody>
               {[...filtered].reverse().map((p) => (
                 <tr key={p.match_id}>
-                  <td>{formatDate(p.match_date)}</td>
+                  <td>{formatDate(p.match_date, locale)}</td>
                   <td>{p.opponent}</td>
-                  <td>{p.home_away === "H" ? "Casa" : "Trasferta"}</td>
+                  <td>{p.home_away === "H" ? dict.common.home : dict.common.away}</td>
                   <td>
                     <ResultBadge result={p.result} />
                   </td>
