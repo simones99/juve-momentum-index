@@ -87,6 +87,15 @@ con un volume persistente (`pgdata`) così i dati sopravvivono al rebuild.
 
 Per aggiornare i dati periodicamente: `docker compose run --rm ingest`.
 
+Su macOS c'è anche un refresh automatico giornaliero (alle 3:00, quando le
+partite del giorno sono già finite) via `launchd`:
+`scripts/scheduled_ingest.sh` + `scripts/com.juventum.scheduled-ingest.plist`
+(installato in `~/Library/LaunchAgents`). Avvia Docker Desktop e il
+container `db` solo se non sono già in esecuzione, e li ferma di nuovo se
+li ha avviati lui — non disturba una sessione `docker compose up` già
+attiva. Log in `logs/scheduled-ingest.log`. Per disabilitarlo:
+`launchctl unload ~/Library/LaunchAgents/com.juventum.scheduled-ingest.plist`.
+
 ## Deploy in produzione
 
 1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per
