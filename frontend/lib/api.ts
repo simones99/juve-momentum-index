@@ -7,6 +7,9 @@ import type {
   MatchOut,
   MomentumOverview,
   MomentumPoint,
+  PredictionOut,
+  PredictionOutcome,
+  PredictionStats,
 } from "./types";
 
 // Server-rendered pages run inside the Next.js server process, which — in Docker
@@ -27,14 +30,18 @@ class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+async function apiFetch<T>(
+  path: string,
+  params?: Record<string, string | number | undefined>,
+  headers?: Record<string, string>
+): Promise<T> {
   const url = new URL(`${API_BASE_URL}${path}`);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
     }
   }
-  const response = await fetch(url.toString(), { cache: "no-store" });
+  const response = await fetch(url.toString(), { cache: "no-store", headers });
   if (!response.ok) {
     let detail = `${path} failed with status ${response.status}`;
     try {
@@ -48,10 +55,10 @@ async function apiFetch<T>(path: string, params?: Record<string, string | number
   return response.json() as Promise<T>;
 }
 
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
+async function apiPost<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -140,6 +147,26 @@ export function subscribeToPush(subscription: PushSubscription, locale: string):
 
 export function unsubscribeFromPush(endpoint: string): Promise<{ status: string }> {
   return apiPost<{ status: string }>("/api/v1/push/unsubscribe", { endpoint });
+}
+
+export function getPredictionForMatch(matchId: number, deviceId: string): Promise<PredictionOut | null> {
+  return apiFetch<PredictionOut | null>("/api/v1/predictions/mine", { match_id: matchId }, { "X-Device-Id": deviceId });
+}
+
+export function getPredictionStats(deviceId: string): Promise<PredictionStats> {
+  return apiFetch<PredictionStats>("/api/v1/predictions/stats", undefined, { "X-Device-Id": deviceId });
+}
+
+export function submitPrediction(
+  matchId: number,
+  predictedOutcome: PredictionOutcome,
+  deviceId: string
+): Promise<PredictionOut> {
+  return apiPost<PredictionOut>(
+    "/api/v1/predictions",
+    { match_id: matchId, predicted_outcome: predictedOutcome },
+    { "X-Device-Id": deviceId }
+  );
 }
 
 export { ApiError };

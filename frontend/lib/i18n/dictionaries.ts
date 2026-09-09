@@ -12,6 +12,7 @@ export interface Dictionary {
     matches: string;
     matchBrief: string;
     trasferte: string;
+    pronostici: string;
   };
   sidebar: {
     nextMatch: string;
@@ -150,6 +151,20 @@ export interface Dictionary {
     enabled: string;
     permissionDenied: string;
   };
+  predictions: {
+    formTitle: string;
+    home: string;
+    draw: string;
+    away: string;
+    submitted: string;
+    error: string;
+    pageTitle: string;
+    pageSubtitle: string;
+    totalResolved: string;
+    userAccuracy: string;
+    modelAccuracy: string;
+    noStatsYet: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -161,6 +176,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       matches: "Matches",
       matchBrief: "Match Brief",
       trasferte: "Trasferte",
+      pronostici: "Pronostici",
     },
     sidebar: {
       nextMatch: "Prossima partita",
@@ -302,6 +318,20 @@ export const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Notifiche attive",
       permissionDenied: "Notifiche bloccate dal browser — abilitale nelle impostazioni del sito.",
     },
+    predictions: {
+      formTitle: "Il tuo pronostico",
+      home: "1",
+      draw: "X",
+      away: "2",
+      submitted: "Pronostico salvato",
+      error: "Invio non riuscito, riprova.",
+      pageTitle: "Le mie previsioni",
+      pageSubtitle: "Tu contro il modello Elo, sulle partite già giocate.",
+      totalResolved: "Partite valutate",
+      userAccuracy: "La tua accuratezza",
+      modelAccuracy: "Accuratezza del modello",
+      noStatsYet: "Nessuna partita valutata ancora — invia un pronostico prima del fischio d'inizio.",
+    },
   },
   en: {
     htmlLang: "en",
@@ -311,6 +341,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       matches: "Matches",
       matchBrief: "Match Brief",
       trasferte: "Away Trips",
+      pronostici: "Predictions",
     },
     sidebar: {
       nextMatch: "Next match",
@@ -451,6 +482,20 @@ export const dictionaries: Record<Locale, Dictionary> = {
       enable: "Enable notifications",
       enabled: "Notifications on",
       permissionDenied: "Notifications blocked by the browser — enable them in the site settings.",
+    },
+    predictions: {
+      formTitle: "Your prediction",
+      home: "1",
+      draw: "X",
+      away: "2",
+      submitted: "Prediction saved",
+      error: "Couldn't submit, try again.",
+      pageTitle: "My predictions",
+      pageSubtitle: "You vs the Elo model, on matches already played.",
+      totalResolved: "Matches scored",
+      userAccuracy: "Your accuracy",
+      modelAccuracy: "Model accuracy",
+      noStatsYet: "No matches scored yet — submit a prediction before kickoff.",
     },
   },
 };

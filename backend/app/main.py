@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, brief, health, matches, momentum, push, travel
+from app.api.routes import admin, brief, health, matches, momentum, predictions, push, travel
 from app.config import get_settings
 
 settings = get_settings()
@@ -23,3 +23,4 @@ app.include_router(brief.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(travel.router, prefix="/api/v1")
 app.include_router(push.router, prefix="/api/v1")
+app.include_router(predictions.router, prefix="/api/v1")

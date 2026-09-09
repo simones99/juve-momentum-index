@@ -18,7 +18,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.core.constants import COMPETITION_SERIE_A, SUPPORTED_COMPETITIONS, TEAM_NAME, UPCOMING_MATCH_STATUSES
+from app.core.constants import (
+    COMPETITION_SERIE_A,
+    MATCH_STATUS_FINISHED,
+    SUPPORTED_COMPETITIONS,
+    TEAM_NAME,
+    UPCOMING_MATCH_STATUSES,
+)
 from app.db import SessionLocal
 from app.features.recompute import recompute_all_derived
 from app.ingestion.football_data_client import FootballDataClient, FootballDataError
@@ -27,7 +33,9 @@ from app.ingestion.repository import delete_wikipedia_rows_for_season, upsert_ma
 from app.ingestion.wikipedia_scraper import scrape_serie_a_season
 from app.models.juve_momentum import JuveMomentum
 from app.models.match import Match
+from app.models.prediction import Prediction
 from app.notifications.push_sender import notify_subscribers
+from app.predictions.resolver import resolve_predictions
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +108,25 @@ def _ingest_season_from_wikipedia(db: Session, season: str) -> int:
         )
         upsert_match(db, match_in)
     return len(rows)
+
+
+def _resolve_finished_predictions(db: Session) -> None:
+    """Resolves predictions for every Juventus match that finished with
+    still-unresolved predictions. Cheap indexed query; `resolve_predictions`
+    itself is a no-op once a match has nothing left to resolve, so re-running
+    this on every ingest is safe."""
+    stmt = (
+        select(Match)
+        .join(Prediction, Prediction.match_id == Match.id)
+        .where(
+            (Match.home_team == TEAM_NAME) | (Match.away_team == TEAM_NAME),
+            Match.status == MATCH_STATUS_FINISHED,
+            Prediction.resolved_at.is_(None),
+        )
+        .distinct()
+    )
+    for match in db.scalars(stmt):
+        resolve_predictions(db, match)
 
 
 def _notify_brief_ready(db: Session) -> None:
@@ -190,6 +217,7 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
         db.commit()
         logger.info("Recomputed elo_ratings and juve_momentum")
 
+        _resolve_finished_predictions(db)
         _notify_brief_ready(db)
         _notify_momentum_swing(db)
     finally:

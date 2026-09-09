@@ -129,3 +129,26 @@ export interface LiveMatchOut {
   probabilities: LiveProbabilities;
   is_approximate: boolean;
 }
+
+export type PredictionOutcome = "HOME" | "DRAW" | "AWAY";
+
+export interface PredictionOut {
+  id: number;
+  match_id: number;
+  predicted_outcome: PredictionOutcome;
+  model_home_prob: number;
+  model_draw_prob: number;
+  model_away_prob: number;
+  is_correct: boolean | null;
+  model_was_correct: boolean | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface PredictionStats {
+  total_resolved: number;
+  user_correct: number;
+  model_correct: number;
+  user_accuracy: number | null;
+  model_accuracy: number | null;
+}

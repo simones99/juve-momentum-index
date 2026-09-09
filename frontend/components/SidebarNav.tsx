@@ -61,6 +61,15 @@ function items(dict: Dictionary) {
         </>
       ),
     },
+    {
+      href: "/pronostici",
+      label: dict.nav.pronostici,
+      icon: (
+        <>
+          <path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ),
+    },
   ];
 }
 

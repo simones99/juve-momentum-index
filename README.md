@@ -126,6 +126,22 @@ Il toggle "Attiva notifiche" in sidebar registra un service worker
 disabilita quel job, resta comunque disponibile Brief pronto/Momentum swing
 (agganciati al refresh giornaliero dei dati).
 
+## Pronostici "Batti il modello"
+
+Ogni visitatore (nessun account) può pronosticare 1/X/2 per la prossima
+partita Juve prima del fischio d'inizio, sfidando il modello Elo esistente.
+L'identità è un cookie anonimo `device_id`, generato al primo accesso da
+`frontend/proxy.ts` (il file `proxy.js`/`.ts` di Next.js 16 — non più
+`middleware.js`, deprecato in questa versione) e letto lato server da
+`frontend/lib/deviceId.ts`.
+
+Al momento dell'invio viene salvato uno snapshot delle probabilità del
+modello (`estimate_match_probabilities`, le stesse usate dal Match Brief);
+quando la partita finisce, `resolve_predictions` (agganciato a
+`update_matches`) confronta sia il pronostico dell'utente sia l'argmax del
+modello con il risultato reale. La pagina "Le mie previsioni"
+(`/pronostici`) mostra l'accuratezza aggregata "tu vs modello".
+
 ## Deploy in produzione
 
 1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per

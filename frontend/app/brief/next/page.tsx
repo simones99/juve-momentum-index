@@ -1,5 +1,7 @@
-import { ApiError, getNextMatchBrief } from "@/lib/api";
+import { ApiError, getNextMatchBrief, getPredictionForMatch, getUpcomingMatches } from "@/lib/api";
 import { MatchBriefCard } from "@/components/MatchBriefCard";
+import { PredictionForm } from "@/components/PredictionForm";
+import { getDeviceId } from "@/lib/deviceId";
 import { getDictionary } from "@/lib/i18n/server";
 
 export default async function NextMatchBriefPage() {
@@ -20,11 +22,19 @@ export default async function NextMatchBriefPage() {
     throw err;
   }
 
+  const deviceId = await getDeviceId();
+  const [nextMatch] = await getUpcomingMatches(1).catch(() => []);
+  const existingPrediction =
+    nextMatch && deviceId ? await getPredictionForMatch(nextMatch.id, deviceId).catch(() => null) : null;
+
   return (
     <>
       <h1>{dict.brief.title}</h1>
       <p className="subtitle">{dict.brief.subtitle}</p>
       <MatchBriefCard brief={brief} />
+      {nextMatch && deviceId && (
+        <PredictionForm matchId={nextMatch.id} deviceId={deviceId} existingPrediction={existingPrediction} />
+      )}
     </>
   );
 }
