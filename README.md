@@ -96,6 +96,16 @@ li ha avviati lui — non disturba una sessione `docker compose up` già
 attiva. Log in `logs/scheduled-ingest.log`. Per disabilitarlo:
 `launchctl unload ~/Library/LaunchAgents/com.juventum.scheduled-ingest.plist`.
 
+C'è anche un secondo job, più frequente (ogni ~2,5 minuti, tutto il giorno),
+che aggiorna punteggio/stato delle partite della Juve **in corso** senza
+toccare Docker: `scripts/scheduled_live_poll.sh` +
+`scripts/com.juventum.scheduled-live-poll.plist` chiama semplicemente
+`POST /api/v1/admin/poll-live` sul backend (richiede `ADMIN_TOKEN` in
+`backend/.env`; `BACKEND_URL` nello stesso file punta al backend da
+interrogare, locale o quello in produzione). Nei giorni senza partite Juve
+il costo è una singola query al DB, non una chiamata a football-data.org.
+Log in `logs/scheduled-live-poll.log`.
+
 ## Deploy in produzione
 
 1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per

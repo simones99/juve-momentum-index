@@ -1,7 +1,18 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
+import pytest
+
+import app.api.routes.matches as matches_routes
 from app.core.constants import COMPETITION_SERIE_A, SOURCE_FOOTBALL_DATA, TEAM_NAME
 from app.models.match import Match
+
+TODAY = date(2024, 3, 15)
+
+
+class _FrozenDate(date):
+    @classmethod
+    def today(cls):
+        return TODAY
 
 
 def _make_match(**overrides) -> Match:
@@ -185,3 +196,87 @@ def test_recent_matches_respects_limit_keeping_the_most_recent(client, db):
     response = client.get("/api/v1/matches/recent", params={"limit": 2})
     body = response.json()
     assert [m["away_team"] for m in body] == ["Napoli", "Milan"]
+
+
+def test_live_match_returns_null_when_nothing_is_in_play(client, db, monkeypatch):
+    monkeypatch.setattr(matches_routes, "date", _FrozenDate)
+    db.add(
+        _make_match(
+            external_id="scheduled-today",
+            status="SCHEDULED",
+            home_goals=None,
+            away_goals=None,
+            match_date=datetime(2024, 3, 15, 20, 45, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/live")
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_live_match_returns_juve_home_match_in_play(client, db, monkeypatch):
+    monkeypatch.setattr(matches_routes, "date", _FrozenDate)
+    db.add(
+        _make_match(
+            external_id="live-home",
+            status="IN_PLAY",
+            home_goals=1,
+            away_goals=0,
+            match_date=datetime(2024, 3, 15, 20, 45, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/live")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["opponent"] == "Inter"
+    assert body["home_away"] == "H"
+    assert body["status"] == "IN_PLAY"
+    assert body["home_goals"] == 1
+    assert body["away_goals"] == 0
+    probs = body["probabilities"]
+    assert probs["win"] + probs["draw"] + probs["loss"] == pytest.approx(1.0)
+    assert body["is_approximate"] is True
+
+
+def test_live_match_returns_juve_away_match_with_correct_perspective(client, db, monkeypatch):
+    monkeypatch.setattr(matches_routes, "date", _FrozenDate)
+    db.add(
+        _make_match(
+            external_id="live-away",
+            home_team="Milan",
+            away_team=TEAM_NAME,
+            status="PAUSED",
+            home_goals=0,
+            away_goals=1,
+            match_date=datetime(2024, 3, 15, 15, 0, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/live")
+    body = response.json()
+    assert body["opponent"] == "Milan"
+    assert body["home_away"] == "A"
+    # Juve is away and leading 1-0, so the model should favor a Juve win.
+    assert body["probabilities"]["win"] > body["probabilities"]["loss"]
+
+
+def test_live_match_ignores_matches_not_scheduled_today(client, db, monkeypatch):
+    monkeypatch.setattr(matches_routes, "date", _FrozenDate)
+    db.add(
+        _make_match(
+            external_id="live-yesterday",
+            status="IN_PLAY",
+            home_goals=1,
+            away_goals=0,
+            match_date=datetime(2024, 3, 14, 20, 45, tzinfo=timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/matches/live")
+    assert response.json() is None

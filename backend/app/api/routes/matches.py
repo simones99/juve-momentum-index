@@ -1,10 +1,15 @@
+from datetime import date, datetime, time, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.constants import MATCH_STATUS_FINISHED, TEAM_NAME, UPCOMING_MATCH_STATUSES
+from app.briefs.template_brief import _current_elo
+from app.core.constants import LIVE_MATCH_STATUSES, MATCH_STATUS_FINISHED, TEAM_NAME, UPCOMING_MATCH_STATUSES
 from app.db import get_db
+from app.features.win_probability import adjust_live_probabilities, estimate_match_probabilities
 from app.models.match import Match
+from app.schemas.live import LiveMatchOut, LiveProbabilities
 from app.schemas.match import MatchListResponse, MatchOut
 
 router = APIRouter(tags=["matches"])
@@ -106,6 +111,51 @@ def list_recent_matches(
         .limit(limit)
     )
     return [match_to_out(m) for m in db.scalars(stmt)][::-1]
+
+
+@router.get("/matches/live", response_model=LiveMatchOut | None)
+def get_live_match(db: Session = Depends(get_db)) -> LiveMatchOut | None:
+    """The Juventus match currently in progress today, if any — `null` on
+    every other day/state. Probabilities are an approximate live adjustment
+    of the pre-match Elo estimate (see adjust_live_probabilities), not a
+    backtested in-game model."""
+    today = date.today()
+    start = datetime.combine(today, time.min, tzinfo=timezone.utc)
+    end = datetime.combine(today, time.max, tzinfo=timezone.utc)
+    stmt = (
+        select(Match)
+        .where(
+            (Match.home_team == TEAM_NAME) | (Match.away_team == TEAM_NAME),
+            Match.match_date >= start,
+            Match.match_date <= end,
+            Match.status.in_(LIVE_MATCH_STATUSES),
+        )
+        .order_by(Match.match_date.asc())
+        .limit(1)
+    )
+    match = db.scalars(stmt).first()
+    if match is None:
+        return None
+
+    is_home = match.home_team == TEAM_NAME
+    opponent = match.away_team if is_home else match.home_team
+    pre_match = estimate_match_probabilities(_current_elo(db, match.home_team), _current_elo(db, match.away_team))
+    live = adjust_live_probabilities(pre_match, match.home_goals or 0, match.away_goals or 0)
+    juve_probs = (
+        LiveProbabilities(win=live["home"], draw=live["draw"], loss=live["away"])
+        if is_home
+        else LiveProbabilities(win=live["away"], draw=live["draw"], loss=live["home"])
+    )
+
+    return LiveMatchOut(
+        match_id=match.id,
+        opponent=opponent,
+        home_away="H" if is_home else "A",
+        status=match.status,
+        home_goals=match.home_goals or 0,
+        away_goals=match.away_goals or 0,
+        probabilities=juve_probs,
+    )
 
 
 @router.get("/matches/{match_id}", response_model=MatchOut)

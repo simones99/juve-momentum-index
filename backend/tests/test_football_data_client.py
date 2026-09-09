@@ -83,3 +83,20 @@ def test_missing_api_key_raises_before_any_request(monkeypatch):
     client = FootballDataClient(api_key="")
     with pytest.raises(FootballDataError):
         client.get_competition_matches("SA", "2024")
+
+
+def test_get_match_returns_the_match_object_directly(monkeypatch):
+    # Confirmed against the live API: GET /v4/matches/{id} returns the match
+    # fields at the top level, unlike the list endpoints (which wrap results
+    # in a "matches" key) — no extra unwrapping needed here.
+    monkeypatch.setattr(time, "sleep", lambda *_: None)
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda *a, **k: _response(200, json_body={"id": 12345, "status": "IN_PLAY", "score": {}}),
+    )
+
+    client = FootballDataClient(api_key="fake-key")
+    match = client.get_match("12345")
+
+    assert match == {"id": 12345, "status": "IN_PLAY", "score": {}}

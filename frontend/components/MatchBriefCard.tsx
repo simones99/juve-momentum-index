@@ -1,45 +1,14 @@
-import type { BriefData, BriefResponse } from "@/lib/types";
-import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { BriefResponse } from "@/lib/types";
 import { getDictionary } from "@/lib/i18n/server";
+import { ProbabilityBar } from "./ProbabilityBar";
 import { ResultBadge } from "./ResultBadge";
 import { TrendIcon } from "./TrendIcon";
-
-function ProbabilityBar({ data, dict }: { data: BriefData; dict: Dictionary }) {
-  if (data.win_probability === null || data.draw_probability === null || data.loss_probability === null) {
-    return null;
-  }
-  const win = data.win_probability * 100;
-  const draw = data.draw_probability * 100;
-  const loss = data.loss_probability * 100;
-  const opponentLabel = data.opponent ?? "";
-  const title = data.kind === "pre" ? dict.brief.probTitlePre : dict.brief.probTitlePost;
-
-  return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 6 }}>{title}</div>
-      <div style={{ display: "flex", height: 10, borderRadius: 999, overflow: "hidden" }}>
-        <div style={{ width: `${win}%`, background: "var(--win)" }} title={`Juve ${win.toFixed(0)}%`} />
-        <div
-          style={{ width: `${draw}%`, background: "var(--draw)" }}
-          title={`${dict.brief.drawLabel} ${draw.toFixed(0)}%`}
-        />
-        <div style={{ width: `${loss}%`, background: "var(--loss)" }} title={`${opponentLabel} ${loss.toFixed(0)}%`} />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: "0.8rem" }}>
-        <span>Juve {win.toFixed(0)}%</span>
-        <span style={{ color: "var(--text-muted)" }}>
-          {dict.brief.drawLabel} {draw.toFixed(0)}%
-        </span>
-        <span>{opponentLabel} {loss.toFixed(0)}%</span>
-      </div>
-      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 6 }}>{dict.brief.basedOnHistory}</div>
-    </div>
-  );
-}
 
 export async function MatchBriefCard({ brief }: { brief: BriefResponse }) {
   const { data } = brief;
   const { dict } = await getDictionary();
+  const hasProbabilities =
+    data.win_probability !== null && data.draw_probability !== null && data.loss_probability !== null;
 
   return (
     <div className="card">
@@ -53,7 +22,17 @@ export async function MatchBriefCard({ brief }: { brief: BriefResponse }) {
         </span>
       </div>
 
-      <ProbabilityBar data={data} dict={dict} />
+      {hasProbabilities && (
+        <ProbabilityBar
+          win={data.win_probability!}
+          draw={data.draw_probability!}
+          loss={data.loss_probability!}
+          opponentLabel={data.opponent ?? ""}
+          title={data.kind === "pre" ? dict.brief.probTitlePre : dict.brief.probTitlePost}
+          footnote={dict.brief.basedOnHistory}
+          drawLabel={dict.brief.drawLabel}
+        />
+      )}
 
       <div className="brief-text">
         {brief.display_text.map((line, i) => (

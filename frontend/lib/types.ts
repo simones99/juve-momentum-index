@@ -112,3 +112,20 @@ export interface AwayFixturesResponse {
   from_location: ResolvedLocation;
   fixtures: AwayFixtureOut[];
 }
+
+export interface LiveProbabilities {
+  win: number;
+  draw: number;
+  loss: number;
+}
+
+export interface LiveMatchOut {
+  match_id: number;
+  opponent: string;
+  home_away: "H" | "A";
+  status: string;
+  home_goals: number;
+  away_goals: number;
+  probabilities: LiveProbabilities;
+  is_approximate: boolean;
+}

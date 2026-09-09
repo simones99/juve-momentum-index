@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SidebarNav } from "@/components/SidebarNav";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { LiveMatchBanner } from "@/components/LiveMatchBanner";
 import { getUpcomingMatches } from "@/lib/api";
 import { TEAM_NAME } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n/server";
@@ -82,7 +83,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </div>
             </aside>
 
-            <main className="app-main">{children}</main>
+            <main className="app-main">
+              <LiveMatchBanner />
+              {children}
+            </main>
           </div>
           <footer className="site-footer">{dict.footer}</footer>
         </LocaleProvider>

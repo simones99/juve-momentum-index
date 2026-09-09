@@ -57,3 +57,41 @@ def estimate_match_probabilities(
         "draw": draw,
         "away": (1 - home_win_share) * (1 - draw),
     }
+
+
+GOAL_DIFF_SHIFT_PER_GOAL = 0.28
+"""How much probability mass (of the unit simplex) shifts toward the leading
+side per goal of difference. Not backtested — unlike DRAW_PEAK_PROBABILITY/
+DRAW_DECAY_SCALE above, there's no historical minute-by-minute dataset to
+validate an in-game model against (football-data.org's free tier exposes
+only the current score and status, no elapsed minute — see poller.py). This
+is a simple, explicitly-labeled approximation for a "live" display, not a
+calibrated forecast."""
+
+
+def adjust_live_probabilities(
+    pre_match_probs: dict[str, float], home_goals: int, away_goals: int
+) -> dict[str, float]:
+    """Shifts `pre_match_probs` (as returned by `estimate_match_probabilities`)
+    toward the side currently leading, in proportion to the goal difference.
+    An approximation for display during a live match — see
+    GOAL_DIFF_SHIFT_PER_GOAL's docstring for why this isn't a backtested model.
+    """
+    diff = home_goals - away_goals
+    shift = max(-1.0, min(1.0, diff * GOAL_DIFF_SHIFT_PER_GOAL))
+
+    home = pre_match_probs["home"]
+    draw = pre_match_probs["draw"]
+    away = pre_match_probs["away"]
+
+    if shift >= 0:
+        home = home + shift * (draw + away)
+        draw = draw * (1 - shift)
+        away = away * (1 - shift)
+    else:
+        shift = -shift
+        away = away + shift * (draw + home)
+        draw = draw * (1 - shift)
+        home = home * (1 - shift)
+
+    return {"home": home, "draw": draw, "away": away}

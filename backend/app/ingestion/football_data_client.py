@@ -108,3 +108,11 @@ class FootballDataClient:
         `season` is the starting year, e.g. "2024" for the 2024-2025 season."""
         data = self._get(f"/competitions/{competition_code}/matches", params={"season": season})
         return data.get("matches", [])
+
+    def get_match(self, external_id: str) -> dict:
+        """A single match by its football-data.org id — unlike the
+        competition/season list endpoint, this returns the match object
+        directly (confirmed against the live API: no wrapping key). Used by
+        the live poller to re-check one specific match's status/score
+        without re-downloading the whole competition/season."""
+        return self._get(f"/matches/{external_id}")

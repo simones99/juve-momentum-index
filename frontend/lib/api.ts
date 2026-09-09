@@ -2,6 +2,7 @@ import type {
   AwayFixturesResponse,
   BriefResponse,
   CompetitionOut,
+  LiveMatchOut,
   MatchListResponse,
   MatchOut,
   MomentumOverview,
@@ -102,6 +103,10 @@ export function getCompetitions(): Promise<CompetitionOut[]> {
 
 export function getAwayFixtures(fromCity: string): Promise<AwayFixturesResponse> {
   return apiFetch<AwayFixturesResponse>("/api/v1/travel/away-fixtures", { from_city: fromCity });
+}
+
+export function getLiveMatch(): Promise<LiveMatchOut | null> {
+  return apiFetch<LiveMatchOut | null>("/api/v1/matches/live");
 }
 
 export { ApiError };

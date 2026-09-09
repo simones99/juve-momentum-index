@@ -138,6 +138,12 @@ export interface Dictionary {
     notFeasible: string;
   };
   resultBadge: { W: string; D: string; L: string };
+  live: {
+    badge: string;
+    halftime: string;
+    probTitle: string;
+    approxNote: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -278,6 +284,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
       notFeasible: "richiede pernottamento",
     },
     resultBadge: { W: "V", D: "N", L: "P" },
+    live: {
+      badge: "LIVE",
+      halftime: "Intervallo",
+      probTitle: "Probabilità live (stima)",
+      approxNote: "Stima live approssimata, aggiornata col punteggio — non è un modello calibrato sul minuto di gioco.",
+    },
   },
   en: {
     htmlLang: "en",
@@ -416,5 +428,11 @@ export const dictionaries: Record<Locale, Dictionary> = {
       notFeasible: "requires an overnight stay",
     },
     resultBadge: { W: "W", D: "D", L: "L" },
+    live: {
+      badge: "LIVE",
+      halftime: "Half-time",
+      probTitle: "Live probability (estimate)",
+      approxNote: "Approximate live estimate, updated with the score — not a model calibrated on match minute.",
+    },
   },
 };

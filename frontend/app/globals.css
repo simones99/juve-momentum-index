@@ -412,6 +412,35 @@ tbody tr:last-child td {
   color: var(--text-muted);
 }
 
+.badge--live {
+  background: var(--loss);
+  gap: 5px;
+}
+
+.badge--live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.live-banner {
+  margin-bottom: 24px;
+}
+
+.live-banner__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.live-banner__score {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
 .empty-state {
   color: var(--text-muted);
   padding: 24px;
