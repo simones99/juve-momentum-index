@@ -44,7 +44,7 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-docker compose run --rm ingest
+docker compose run --build --rm ingest
 ingest_status=$?
 
 if [ "$DB_WAS_RUNNING" = false ]; then

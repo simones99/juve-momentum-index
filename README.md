@@ -85,6 +85,15 @@ docker compose up backend frontend  # dashboard su http://localhost:3000, API su
 Il database Postgres gira come servizio `db` nello stesso `docker-compose.yml`,
 con un volume persistente (`pgdata`) così i dati sopravvivono al rebuild.
 
+> **Un solo Postgres alla volta.** Sia il Postgres Homebrew (`localhost:5432` di
+> sistema) sia il container `db` di `docker-compose.yml` ascoltano sulla stessa
+> porta 5432: se sono entrambi attivi, quale dei due risponde dipende da quale è
+> partito per primo, e i due database divergono silenziosamente. Usa il
+> container `db` come fonte di verità (è quello scritto dal job di ingestion in
+> `docker compose run --rm ingest` e dal workflow GitHub Actions — vedi sotto):
+> se lavori senza Docker, ferma `brew services stop postgresql@16` prima di
+> avviare `docker compose up`.
+
 Per aggiornare i dati periodicamente: `docker compose run --rm ingest`.
 
 Su macOS c'è anche un refresh automatico giornaliero (alle 3:00, quando le
