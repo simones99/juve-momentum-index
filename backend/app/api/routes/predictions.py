@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.briefs.template_brief import _current_elo
@@ -10,7 +10,7 @@ from app.db import get_db
 from app.features.win_probability import estimate_match_probabilities
 from app.models.match import Match
 from app.models.prediction import Prediction
-from app.schemas.prediction import PredictionIn, PredictionOut, PredictionStats
+from app.schemas.prediction import PredictionCommunityStats, PredictionIn, PredictionOut, PredictionStats
 
 router = APIRouter(tags=["predictions"])
 
@@ -104,5 +104,25 @@ def get_prediction_stats(
         user_correct=user_correct,
         model_correct=model_correct,
         user_accuracy=(user_correct / total) if total else None,
+        model_accuracy=(model_correct / total) if total else None,
+    )
+
+
+@router.get("/predictions/community-stats", response_model=PredictionCommunityStats)
+def get_community_prediction_stats(db: Session = Depends(get_db)) -> PredictionCommunityStats:
+    resolved = list(db.scalars(select(Prediction).where(Prediction.resolved_at.is_not(None))))
+    total = len(resolved)
+    community_correct = sum(1 for p in resolved if p.is_correct)
+    model_correct = sum(1 for p in resolved if p.model_was_correct)
+    total_predictors = db.scalar(
+        select(func.count(func.distinct(Prediction.device_id))).where(Prediction.resolved_at.is_not(None))
+    )
+
+    return PredictionCommunityStats(
+        total_predictors=total_predictors or 0,
+        total_resolved=total,
+        community_correct=community_correct,
+        model_correct=model_correct,
+        community_accuracy=(community_correct / total) if total else None,
         model_accuracy=(model_correct / total) if total else None,
     )

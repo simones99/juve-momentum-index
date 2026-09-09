@@ -152,3 +152,12 @@ export interface PredictionStats {
   user_accuracy: number | null;
   model_accuracy: number | null;
 }
+
+export interface PredictionCommunityStats {
+  total_predictors: number;
+  total_resolved: number;
+  community_correct: number;
+  model_correct: number;
+  community_accuracy: number | null;
+  model_accuracy: number | null;
+}

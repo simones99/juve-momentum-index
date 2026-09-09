@@ -7,6 +7,7 @@ import type {
   MatchOut,
   MomentumOverview,
   MomentumPoint,
+  PredictionCommunityStats,
   PredictionOut,
   PredictionOutcome,
   PredictionStats,
@@ -155,6 +156,10 @@ export function getPredictionForMatch(matchId: number, deviceId: string): Promis
 
 export function getPredictionStats(deviceId: string): Promise<PredictionStats> {
   return apiFetch<PredictionStats>("/api/v1/predictions/stats", undefined, { "X-Device-Id": deviceId });
+}
+
+export function getCommunityPredictionStats(): Promise<PredictionCommunityStats> {
+  return apiFetch<PredictionCommunityStats>("/api/v1/predictions/community-stats");
 }
 
 export function submitPrediction(

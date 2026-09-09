@@ -189,3 +189,108 @@ def test_stats_aggregate_over_resolved_predictions(client, db):
     assert body["model_correct"] == 0
     assert body["user_accuracy"] == 1.0
     assert body["model_accuracy"] == 0.0
+
+
+def test_community_stats_requires_no_device_id(client):
+    response = client.get("/api/v1/predictions/community-stats")
+
+    assert response.status_code == 200
+
+
+def test_community_stats_are_none_with_no_resolved_predictions(client, db):
+    match = _make_match()
+    db.add(match)
+    db.commit()
+
+    client.post(
+        "/api/v1/predictions",
+        json={"match_id": match.id, "predicted_outcome": "HOME"},
+        headers={"X-Device-Id": "device-1"},
+    )
+
+    response = client.get("/api/v1/predictions/community-stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_predictors"] == 0
+    assert body["total_resolved"] == 0
+    assert body["community_accuracy"] is None
+    assert body["model_accuracy"] is None
+
+
+def test_community_stats_aggregate_across_devices(client, db):
+    match = _make_match()
+    db.add(match)
+    db.commit()
+
+    db.add_all(
+        [
+            Prediction(
+                device_id="device-1",
+                match_id=match.id,
+                predicted_outcome="HOME",
+                model_home_prob=0.3,
+                model_draw_prob=0.3,
+                model_away_prob=0.4,
+                is_correct=True,
+                model_was_correct=False,
+                resolved_at=datetime.now(timezone.utc),
+            ),
+            Prediction(
+                device_id="device-2",
+                match_id=match.id,
+                predicted_outcome="AWAY",
+                model_home_prob=0.3,
+                model_draw_prob=0.3,
+                model_away_prob=0.4,
+                is_correct=False,
+                model_was_correct=False,
+                resolved_at=datetime.now(timezone.utc),
+            ),
+        ]
+    )
+    db.commit()
+
+    response = client.get("/api/v1/predictions/community-stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_predictors"] == 2
+    assert body["total_resolved"] == 2
+    assert body["community_correct"] == 1
+    assert body["model_correct"] == 0
+    assert body["community_accuracy"] == 0.5
+    assert body["model_accuracy"] == 0.0
+
+
+def test_community_stats_ignore_unresolved_predictions(client, db):
+    match = _make_match()
+    db.add(match)
+    db.commit()
+
+    client.post(
+        "/api/v1/predictions",
+        json={"match_id": match.id, "predicted_outcome": "HOME"},
+        headers={"X-Device-Id": "device-1"},
+    )
+    db.add(
+        Prediction(
+            device_id="device-2",
+            match_id=match.id,
+            predicted_outcome="AWAY",
+            model_home_prob=0.3,
+            model_draw_prob=0.3,
+            model_away_prob=0.4,
+            is_correct=True,
+            model_was_correct=True,
+            resolved_at=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
+
+    response = client.get("/api/v1/predictions/community-stats")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_predictors"] == 1
+    assert body["total_resolved"] == 1

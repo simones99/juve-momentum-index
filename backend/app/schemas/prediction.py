@@ -30,3 +30,12 @@ class PredictionStats(BaseModel):
     model_correct: int
     user_accuracy: float | None  # None until at least one prediction is resolved
     model_accuracy: float | None
+
+
+class PredictionCommunityStats(BaseModel):
+    total_predictors: int
+    total_resolved: int
+    community_correct: int
+    model_correct: int
+    community_accuracy: float | None  # None until at least one prediction is resolved
+    model_accuracy: float | None

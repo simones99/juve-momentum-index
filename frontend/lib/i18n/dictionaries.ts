@@ -164,6 +164,9 @@ export interface Dictionary {
     userAccuracy: string;
     modelAccuracy: string;
     noStatsYet: string;
+    communityTitle: string;
+    totalPredictors: string;
+    communityAccuracy: string;
   };
 }
 
@@ -331,6 +334,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       userAccuracy: "La tua accuratezza",
       modelAccuracy: "Accuratezza del modello",
       noStatsYet: "Nessuna partita valutata ancora — invia un pronostico prima del fischio d'inizio.",
+      communityTitle: "La community",
+      totalPredictors: "Utenti che hanno pronosticato",
+      communityAccuracy: "Accuratezza della community",
     },
   },
   en: {
@@ -496,6 +502,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       userAccuracy: "Your accuracy",
       modelAccuracy: "Model accuracy",
       noStatsYet: "No matches scored yet — submit a prediction before kickoff.",
+      communityTitle: "The community",
+      totalPredictors: "Users who predicted",
+      communityAccuracy: "Community accuracy",
     },
   },
 };
