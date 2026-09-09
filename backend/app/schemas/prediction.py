@@ -30,6 +30,8 @@ class PredictionStats(BaseModel):
     model_correct: int
     user_accuracy: float | None  # None until at least one prediction is resolved
     model_accuracy: float | None
+    current_streak: int  # consecutive correct predictions ending at the most recent resolved match
+    best_streak: int
 
 
 class PredictionCommunityStats(BaseModel):

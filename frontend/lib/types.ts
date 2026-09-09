@@ -151,6 +151,8 @@ export interface PredictionStats {
   model_correct: number;
   user_accuracy: number | null;
   model_accuracy: number | null;
+  current_streak: number;
+  best_streak: number;
 }
 
 export interface PredictionCommunityStats {

@@ -189,6 +189,81 @@ def test_stats_aggregate_over_resolved_predictions(client, db):
     assert body["model_correct"] == 0
     assert body["user_accuracy"] == 1.0
     assert body["model_accuracy"] == 0.0
+    assert body["current_streak"] == 1
+    assert body["best_streak"] == 1
+
+
+def _make_resolved_prediction(match: Match, *, is_correct: bool, device_id: str = "device-1") -> Prediction:
+    return Prediction(
+        device_id=device_id,
+        match_id=match.id,
+        predicted_outcome="HOME",
+        model_home_prob=0.3,
+        model_draw_prob=0.3,
+        model_away_prob=0.4,
+        is_correct=is_correct,
+        model_was_correct=False,
+        resolved_at=datetime.now(timezone.utc),
+    )
+
+
+def test_stats_streak_is_zero_with_no_resolved_predictions(client, db):
+    match = _make_match()
+    db.add(match)
+    db.commit()
+
+    client.post(
+        "/api/v1/predictions",
+        json={"match_id": match.id, "predicted_outcome": "HOME"},
+        headers={"X-Device-Id": "device-1"},
+    )
+
+    response = client.get("/api/v1/predictions/stats", headers={"X-Device-Id": "device-1"})
+
+    body = response.json()
+    assert body["current_streak"] == 0
+    assert body["best_streak"] == 0
+
+
+def test_stats_streak_all_wrong_is_zero(client, db):
+    matches = [
+        _make_match(external_id=f"fd-{i}", match_date=datetime.now(timezone.utc) - timedelta(days=10 - i))
+        for i in range(3)
+    ]
+    db.add_all(matches)
+    db.commit()
+
+    for match in matches:
+        db.add(_make_resolved_prediction(match, is_correct=False))
+    db.commit()
+
+    response = client.get("/api/v1/predictions/stats", headers={"X-Device-Id": "device-1"})
+
+    body = response.json()
+    assert body["current_streak"] == 0
+    assert body["best_streak"] == 0
+
+
+def test_stats_streak_tracks_best_even_after_a_later_reset(client, db):
+    # Chronological order: correct, correct, correct, wrong, correct
+    # -> best_streak captured before the reset (3), current_streak is the tail (1).
+    outcomes = [True, True, True, False, True]
+    matches = [
+        _make_match(external_id=f"fd-{i}", match_date=datetime.now(timezone.utc) - timedelta(days=10 - i))
+        for i in range(len(outcomes))
+    ]
+    db.add_all(matches)
+    db.commit()
+
+    for match, is_correct in zip(matches, outcomes):
+        db.add(_make_resolved_prediction(match, is_correct=is_correct))
+    db.commit()
+
+    response = client.get("/api/v1/predictions/stats", headers={"X-Device-Id": "device-1"})
+
+    body = response.json()
+    assert body["current_streak"] == 1
+    assert body["best_streak"] == 3
 
 
 def test_community_stats_requires_no_device_id(client):

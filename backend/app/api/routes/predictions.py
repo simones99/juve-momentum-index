@@ -21,6 +21,16 @@ def _require_device_id(x_device_id: str | None) -> str:
     return x_device_id
 
 
+def _compute_streaks(resolved_in_order: list[Prediction]) -> tuple[int, int]:
+    """Longest and current run of consecutive correct predictions, in chronological order."""
+    best = 0
+    running = 0
+    for p in resolved_in_order:
+        running = running + 1 if p.is_correct else 0
+        best = max(best, running)
+    return running, best
+
+
 def _prediction_to_out(p: Prediction) -> PredictionOut:
     return PredictionOut(
         id=p.id,
@@ -92,12 +102,16 @@ def get_prediction_stats(
 
     resolved = list(
         db.scalars(
-            select(Prediction).where(Prediction.device_id == device_id, Prediction.resolved_at.is_not(None))
+            select(Prediction)
+            .join(Match, Prediction.match_id == Match.id)
+            .where(Prediction.device_id == device_id, Prediction.resolved_at.is_not(None))
+            .order_by(Match.match_date)
         )
     )
     total = len(resolved)
     user_correct = sum(1 for p in resolved if p.is_correct)
     model_correct = sum(1 for p in resolved if p.model_was_correct)
+    current_streak, best_streak = _compute_streaks(resolved)
 
     return PredictionStats(
         total_resolved=total,
@@ -105,6 +119,8 @@ def get_prediction_stats(
         model_correct=model_correct,
         user_accuracy=(user_correct / total) if total else None,
         model_accuracy=(model_correct / total) if total else None,
+        current_streak=current_streak,
+        best_streak=best_streak,
     )
 
 

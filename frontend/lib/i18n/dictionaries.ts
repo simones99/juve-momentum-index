@@ -167,6 +167,9 @@ export interface Dictionary {
     communityTitle: string;
     totalPredictors: string;
     communityAccuracy: string;
+    streakTitle: string;
+    currentStreak: string;
+    bestStreak: string;
   };
 }
 
@@ -337,6 +340,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       communityTitle: "La community",
       totalPredictors: "Utenti che hanno pronosticato",
       communityAccuracy: "Accuratezza della community",
+      streakTitle: "Serie",
+      currentStreak: "Serie attuale",
+      bestStreak: "Miglior serie",
     },
   },
   en: {
@@ -505,6 +511,9 @@ export const dictionaries: Record<Locale, Dictionary> = {
       communityTitle: "The community",
       totalPredictors: "Users who predicted",
       communityAccuracy: "Community accuracy",
+      streakTitle: "Streak",
+      currentStreak: "Current streak",
+      bestStreak: "Best streak",
     },
   },
 };
