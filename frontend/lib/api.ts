@@ -48,6 +48,25 @@ async function apiFetch<T>(path: string, params?: Record<string, string | number
   return response.json() as Promise<T>;
 }
 
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let detail = `${path} failed with status ${response.status}`;
+    try {
+      const responseBody = await response.json();
+      if (typeof responseBody?.detail === "string") detail = responseBody.detail;
+    } catch {
+      // response body wasn't JSON (or empty) — keep the generic message
+    }
+    throw new ApiError(response.status, detail);
+  }
+  return response.json() as Promise<T>;
+}
+
 export function getMomentumOverview(season?: string): Promise<MomentumOverview> {
   return apiFetch<MomentumOverview>("/api/v1/momentum/overview", { season });
 }
@@ -107,6 +126,20 @@ export function getAwayFixtures(fromCity: string): Promise<AwayFixturesResponse>
 
 export function getLiveMatch(): Promise<LiveMatchOut | null> {
   return apiFetch<LiveMatchOut | null>("/api/v1/matches/live");
+}
+
+export function subscribeToPush(subscription: PushSubscription, locale: string): Promise<{ status: string }> {
+  const json = subscription.toJSON();
+  return apiPost<{ status: string }>("/api/v1/push/subscribe", {
+    endpoint: json.endpoint,
+    keys: json.keys,
+    device_id: null,
+    locale,
+  });
+}
+
+export function unsubscribeFromPush(endpoint: string): Promise<{ status: string }> {
+  return apiPost<{ status: string }>("/api/v1/push/unsubscribe", { endpoint });
 }
 
 export { ApiError };

@@ -117,3 +117,33 @@ def test_api_error_is_logged_and_skipped_not_raised(monkeypatch, db):
     result = poller.poll_live_matches(db, client)
 
     assert result == []
+
+
+def test_kickoff_notification_fires_on_transition_to_in_play(monkeypatch, db):
+    monkeypatch.setattr(poller, "date", _FrozenDate)
+    db.add(_make_match(status="TIMED"))
+    db.commit()
+
+    client = _FakeClient({"fd-1": {"status": "IN_PLAY", "score": {"fullTime": {"home": 0, "away": 0}}}})
+    calls = []
+    monkeypatch.setattr(poller, "notify_subscribers", lambda db, event, payload: calls.append((event, payload)))
+
+    poller.poll_live_matches(db, client)
+
+    assert len(calls) == 1
+    assert calls[0][0] == "kickoff"
+    assert "Inter" in calls[0][1]["body"]
+
+
+def test_kickoff_notification_does_not_refire_when_already_in_play(monkeypatch, db):
+    monkeypatch.setattr(poller, "date", _FrozenDate)
+    db.add(_make_match(status="IN_PLAY"))
+    db.commit()
+
+    client = _FakeClient({"fd-1": {"status": "IN_PLAY", "score": {"fullTime": {"home": 1, "away": 0}}}})
+    calls = []
+    monkeypatch.setattr(poller, "notify_subscribers", lambda db, event, payload: calls.append((event, payload)))
+
+    poller.poll_live_matches(db, client)
+
+    assert calls == []

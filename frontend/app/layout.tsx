@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SidebarNav } from "@/components/SidebarNav";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { PushOptIn } from "@/components/PushOptIn";
 import { LiveMatchBanner } from "@/components/LiveMatchBanner";
 import { getUpcomingMatches } from "@/lib/api";
 import { TEAM_NAME } from "@/lib/constants";
@@ -67,6 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <SidebarNav />
 
               <LanguageToggle />
+              <PushOptIn />
 
               <div className="sidebar__widget">
                 <span className="sidebar__widget-label">{dict.sidebar.nextMatch}</span>

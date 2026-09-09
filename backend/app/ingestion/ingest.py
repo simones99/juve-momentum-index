@@ -12,22 +12,31 @@ seasons roll forward.
 
 import argparse
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.core.constants import COMPETITION_SERIE_A, SUPPORTED_COMPETITIONS
+from app.core.constants import COMPETITION_SERIE_A, SUPPORTED_COMPETITIONS, TEAM_NAME, UPCOMING_MATCH_STATUSES
 from app.db import SessionLocal
 from app.features.recompute import recompute_all_derived
 from app.ingestion.football_data_client import FootballDataClient, FootballDataError
 from app.ingestion.normalize import normalize_football_data_match, normalize_wikipedia_row
 from app.ingestion.repository import delete_wikipedia_rows_for_season, upsert_match
 from app.ingestion.wikipedia_scraper import scrape_serie_a_season
+from app.models.juve_momentum import JuveMomentum
+from app.models.match import Match
+from app.notifications.push_sender import notify_subscribers
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_SEASON_LOOKBACK = 3  # + the current season = 4, matching the free tier's known rolling window
+
+BRIEF_NOTIFY_WINDOW_HOURS = 48
+# Same rolling window as points_rolling5/goal_diff_rolling5, for consistency.
+MOMENTUM_SWING_LOOKBACK = 5
+MOMENTUM_SWING_THRESHOLD = 15.0  # momentum_index is 0-100; empirically a double-digit swing is noteworthy
 
 
 def _current_season_start_year(today: date | None = None) -> int:
@@ -93,6 +102,57 @@ def _ingest_season_from_wikipedia(db: Session, season: str) -> int:
     return len(rows)
 
 
+def _notify_brief_ready(db: Session) -> None:
+    """Notifies once per fixture, for the next Juventus match within the
+    next 48h, the first time an ingest run sees it with no brief
+    notification sent yet — `brief_notified_at` makes this idempotent across
+    daily re-runs."""
+    cutoff = datetime.now(timezone.utc) + timedelta(hours=BRIEF_NOTIFY_WINDOW_HOURS)
+    stmt = (
+        select(Match)
+        .where(
+            (Match.home_team == TEAM_NAME) | (Match.away_team == TEAM_NAME),
+            Match.status.in_(UPCOMING_MATCH_STATUSES),
+            Match.match_date <= cutoff,
+            Match.brief_notified_at.is_(None),
+        )
+        .order_by(Match.match_date.asc())
+        .limit(1)
+    )
+    match = db.scalar(stmt)
+    if match is None:
+        return
+
+    opponent = match.away_team if match.home_team == TEAM_NAME else match.home_team
+    notify_subscribers(db, "brief", {"title": "Match Brief pronto", "body": f"Juventus – {opponent}"})
+    match.brief_notified_at = datetime.now(timezone.utc)
+    db.commit()
+
+
+def _notify_momentum_swing(db: Session) -> None:
+    """Compares the Momentum Index of the most recently played Juventus
+    match against the one `MOMENTUM_SWING_LOOKBACK` matches before it.
+    Unlike the brief-ready hook, there's no persisted "already notified"
+    marker here: `recompute_all_derived` rebuilds `juve_momentum` from
+    scratch on every ingest run, so if the daily scheduled ingest runs again
+    before the next Juventus match, an existing swing is re-evaluated (and
+    re-notified) rather than being remembered as already sent."""
+    stmt = select(JuveMomentum).order_by(JuveMomentum.match_date.desc()).limit(MOMENTUM_SWING_LOOKBACK + 1)
+    recent = list(db.scalars(stmt))
+    if len(recent) <= MOMENTUM_SWING_LOOKBACK:
+        return
+
+    latest, previous = recent[0], recent[MOMENTUM_SWING_LOOKBACK]
+    swing = float(latest.momentum_index) - float(previous.momentum_index)
+    if abs(swing) < MOMENTUM_SWING_THRESHOLD:
+        return
+
+    direction = "in crescita" if swing > 0 else "in calo"
+    notify_subscribers(
+        db, "momentum", {"title": "Momentum Juventus " + direction, "body": f"Indice a {latest.momentum_index:.0f}"}
+    )
+
+
 def update_matches(seasons: list[str] | None = None, competitions: list[str] | None = None) -> None:
     """Downloads/updates match data for the requested seasons (the WHOLE
     competition, not just Juventus' fixtures) and persists it to the DB,
@@ -129,6 +189,9 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
         recompute_all_derived(db)
         db.commit()
         logger.info("Recomputed elo_ratings and juve_momentum")
+
+        _notify_brief_ready(db)
+        _notify_momentum_swing(db)
     finally:
         db.close()
 

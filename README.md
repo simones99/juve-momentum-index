@@ -106,6 +106,26 @@ interrogare, locale o quello in produzione). Nei giorni senza partite Juve
 il costo è una singola query al DB, non una chiamata a football-data.org.
 Log in `logs/scheduled-live-poll.log`.
 
+## Notifiche push
+
+L'app può inviare notifiche push del browser (senza account, senza login) per
+tre eventi: fischio d'inizio di una partita Juve, Match Brief pronto per la
+prossima partita (entro ~48h), swing significativo del Momentum Index. Serve
+una coppia di chiavi VAPID, generabile con `npx web-push generate-vapid-keys`:
+
+- Backend (`backend/.env`): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT` (un `mailto:` di contatto). Se lasciate vuote, l'iscrizione
+  funziona comunque ma l'invio effettivo delle notifiche è disattivato (no-op).
+- Frontend (`frontend/.env.local`): `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — deve
+  coincidere con `VAPID_PUBLIC_KEY` del backend.
+
+Il toggle "Attiva notifiche" in sidebar registra un service worker
+(`frontend/public/sw.js`) e richiede il permesso di notifica al browser
+(funziona anche in locale su `localhost`, non serve HTTPS). L'evento
+"fischio d'inizio" si aggancia al poller del Live Matchday Mode: se si
+disabilita quel job, resta comunque disponibile Brief pronto/Momentum swing
+(agganciati al refresh giornaliero dei dati).
+
 ## Deploy in produzione
 
 1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per
@@ -113,11 +133,13 @@ Log in `logs/scheduled-live-poll.log`.
 2. **Render**: nuovo Web Service da Docker, root directory `backend/`, health
    check `/healthz`. Configura `DATABASE_URL`, `FOOTBALL_DATA_API_KEY`,
    `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
-   `ENABLE_LLM_BRIEF`, `CORS_ORIGINS`, `ADMIN_TOKEN`. Dopo il primo deploy lancia
+   `ENABLE_LLM_BRIEF`, `CORS_ORIGINS`, `ADMIN_TOKEN`, `VAPID_PUBLIC_KEY`,
+   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Dopo il primo deploy lancia
    l'ingestion una volta via Render Shell.
 3. **Vercel**: importa `frontend/` come root directory, imposta
-   `NEXT_PUBLIC_API_BASE_URL` sull'URL pubblico del backend Render (richiede un
-   redeploy se cambiata, perché è compilata a build time).
+   `NEXT_PUBLIC_API_BASE_URL` sull'URL pubblico del backend Render e
+   `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (richiedono un redeploy se cambiate, perché
+   sono compilate a build time).
 
 ## Fonti dati
 

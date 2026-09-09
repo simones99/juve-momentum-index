@@ -14,9 +14,10 @@ from datetime import date, datetime, time, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.constants import MATCH_STATUS_FINISHED, MATCH_STATUS_POSTPONED, TEAM_NAME
+from app.core.constants import MATCH_STATUS_FINISHED, MATCH_STATUS_IN_PLAY, MATCH_STATUS_POSTPONED, TEAM_NAME
 from app.ingestion.football_data_client import FootballDataClient, FootballDataError
 from app.models.match import Match
+from app.notifications.push_sender import notify_subscribers
 
 logger = logging.getLogger(__name__)
 
@@ -46,18 +47,27 @@ def poll_live_matches(db: Session, client: FootballDataClient) -> list[Match]:
     """
     matches = _todays_juve_matches(db, date.today())
     updated: list[Match] = []
+    kickoffs: list[Match] = []
     for match in matches:
         try:
             raw = client.get_match(match.external_id)
         except FootballDataError as exc:
             logger.warning("live poll failed for match external_id=%s: %s", match.external_id, exc)
             continue
+        previous_status = match.status
         score = raw.get("score", {}).get("fullTime", {})
         match.status = raw.get("status", match.status)
         match.home_goals = score.get("home", match.home_goals)
         match.away_goals = score.get("away", match.away_goals)
         updated.append(match)
+        if previous_status != MATCH_STATUS_IN_PLAY and match.status == MATCH_STATUS_IN_PLAY:
+            kickoffs.append(match)
 
     if updated:
         db.commit()
+
+    for match in kickoffs:
+        opponent = match.away_team if match.home_team == TEAM_NAME else match.home_team
+        notify_subscribers(db, "kickoff", {"title": "Kickoff!", "body": f"Juventus – {opponent}"})
+
     return updated

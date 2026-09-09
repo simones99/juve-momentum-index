@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     admin_token: str = ""
 
+    # Web push (https://vapidkeys.com or `npx web-push generate-vapid-keys`)
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@example.com"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

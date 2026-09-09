@@ -38,6 +38,8 @@ class Match(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="SCHEDULED")
     source: Mapped[str] = mapped_column(String(32), nullable=False)
 
+    brief_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

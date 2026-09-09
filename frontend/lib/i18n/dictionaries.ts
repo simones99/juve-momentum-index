@@ -144,6 +144,12 @@ export interface Dictionary {
     probTitle: string;
     approxNote: string;
   };
+  push: {
+    label: string;
+    enable: string;
+    enabled: string;
+    permissionDenied: string;
+  };
 }
 
 export const dictionaries: Record<Locale, Dictionary> = {
@@ -290,6 +296,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
       probTitle: "Probabilità live (stima)",
       approxNote: "Stima live approssimata, aggiornata col punteggio — non è un modello calibrato sul minuto di gioco.",
     },
+    push: {
+      label: "Notifiche",
+      enable: "Attiva notifiche",
+      enabled: "Notifiche attive",
+      permissionDenied: "Notifiche bloccate dal browser — abilitale nelle impostazioni del sito.",
+    },
   },
   en: {
     htmlLang: "en",
@@ -433,6 +445,12 @@ export const dictionaries: Record<Locale, Dictionary> = {
       halftime: "Half-time",
       probTitle: "Live probability (estimate)",
       approxNote: "Approximate live estimate, updated with the score — not a model calibrated on match minute.",
+    },
+    push: {
+      label: "Notifications",
+      enable: "Enable notifications",
+      enabled: "Notifications on",
+      permissionDenied: "Notifications blocked by the browser — enable them in the site settings.",
     },
   },
 };
