@@ -75,26 +75,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <aside className="sidebar">
               <div className="sidebar__brand">
                 <div className="sidebar__brand-mark">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M6 20V9.5L12 4l6 5.5V20"
-                      stroke="#f5f5f7"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M10 20v-6h4v6"
-                      stroke="var(--accent)"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 700,
+                      fontSize: "1.15rem",
+                      letterSpacing: "-0.02em",
+                      lineHeight: 1,
+                    }}
+                  >
+                    <span style={{ color: "var(--ink)" }}>J</span>
+                    <span style={{ color: "var(--accent)" }}>M</span>
+                  </span>
                 </div>
                 <div className="sidebar__brand-text">
-                  <span className="sidebar__brand-name">Momentum</span>
-                  <span className="sidebar__brand-sub">JUVENTUS · JMI</span>
+                  <span className="sidebar__brand-name">Juventum</span>
+                  <span className="sidebar__brand-sub">
+                    {locale === "en" ? "Momentum Index · unofficial" : "Momentum Index · non ufficiale"}
+                  </span>
                 </div>
               </div>
 
