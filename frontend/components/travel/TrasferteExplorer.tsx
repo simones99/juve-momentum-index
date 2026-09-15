@@ -5,6 +5,7 @@ import { ApiError, getAwayFixtures } from "@/lib/api";
 import type { AwayFixtureOut, AwayFixturesResponse } from "@/lib/types";
 import { AwayTripsChart } from "@/components/charts/AwayTripsChart";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { TeamCrest } from "@/components/TeamCrest";
 
 type SortKey = "match_date" | "distance_km" | "effort_score";
 
@@ -123,7 +124,10 @@ export function TrasferteExplorer() {
                     {sortedFixtures.map((f) => (
                       <tr key={f.match_id}>
                         <td>{formatDateTime(f.match_date, locale)}</td>
-                        <td>{f.opponent}</td>
+                        <td>
+                          <TeamCrest url={f.crest_url} name={f.opponent} />
+                          {f.opponent}
+                        </td>
                         <td>
                           {f.stadium ?? "—"}
                           {f.stadium_city ? `, ${f.stadium_city}` : ""}

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { MatchOut } from "@/lib/types";
 import { ResultBadge } from "./ResultBadge";
+import { TeamCrest } from "./TeamCrest";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 function formatDate(iso: string, locale: string): string {
@@ -45,8 +46,14 @@ export function MatchTable({ matches }: { matches: MatchOut[] }) {
               )}
             </td>
             <td>{m.competition_code}</td>
-            <td>{m.home_team}</td>
-            <td>{m.away_team}</td>
+            <td>
+              <TeamCrest url={m.home_crest_url} name={m.home_team} />
+              {m.home_team}
+            </td>
+            <td>
+              <TeamCrest url={m.away_crest_url} name={m.away_team} />
+              {m.away_team}
+            </td>
             <td>
               {m.home_goals !== null && m.away_goals !== null ? `${m.home_goals}-${m.away_goals}` : "—"}
             </td>
