@@ -7,9 +7,9 @@ URLs are football-data.org's own crest CDN (verified against a real,
 read-only call to GET /v4/competitions/SA/teams — not guessed), one per
 club that appeared in that response for the 2026-27 Serie A season.
 Historic/relegated clubs not in the current season's roster (Empoli,
-Cremonese, Salernitana, Spezia, Hellas Verona, Benevento, Brescia, SPAL,
-Sampdoria) have no entry here — a lookup miss is expected and handled
-gracefully by callers (no image shown), not an error.
+Cremonese, FC Crotone, Salernitana, Spezia, Hellas Verona, Benevento,
+Brescia, SPAL, Sampdoria) have no entry here — a lookup miss is expected
+and handled gracefully by callers (no image shown), not an error.
 """
 
 CRESTS: dict[str, str] = {

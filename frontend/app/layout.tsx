@@ -20,7 +20,7 @@ const oswald = Oswald({
 export async function generateMetadata(): Promise<Metadata> {
   const { locale } = await getDictionary();
   return {
-    title: "Juve Momentum Index",
+    title: "Juventum",
     description:
       locale === "en"
         ? "Momentum Index and Match Brief for Juventus, based on Elo and recent form."

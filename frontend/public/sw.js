@@ -1,15 +1,15 @@
 self.addEventListener("push", (event) => {
-  let data = { title: "Juve Momentum Index", body: "" };
+  let data = { title: "Juventum", body: "" };
   if (event.data) {
     try {
       data = event.data.json();
     } catch {
-      data = { title: "Juve Momentum Index", body: event.data.text() };
+      data = { title: "Juventum", body: event.data.text() };
     }
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Juve Momentum Index", {
+    self.registration.showNotification(data.title || "Juventum", {
       body: data.body || "",
     })
   );

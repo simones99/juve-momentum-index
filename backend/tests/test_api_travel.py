@@ -133,6 +133,7 @@ def test_away_fixtures_handles_unknown_stadium_gracefully(client, db, monkeypatc
     fixture = response.json()["fixtures"][0]
     assert fixture["distance_km"] is None
     assert fixture["effort_score"] is None
+    assert fixture["crest_url"] is None
 
 
 def test_away_fixtures_includes_crest_url_for_known_opponent(client, db, monkeypatch):
