@@ -72,6 +72,7 @@ export interface Dictionary {
       away: string;
       result: string;
       outcome: string;
+      approximateDate: string;
     };
     emptyState: string;
     pagination: {
@@ -243,6 +244,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         away: "Trasferta",
         result: "Risultato",
         outcome: "Esito",
+        approximateDate: "Data approssimata",
       },
       emptyState: "Nessuna partita trovata con questi filtri.",
       pagination: {
@@ -414,6 +416,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         away: "Away",
         result: "Score",
         outcome: "Outcome",
+        approximateDate: "Approximate date",
       },
       emptyState: "No matches found with these filters.",
       pagination: {

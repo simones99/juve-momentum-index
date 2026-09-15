@@ -13,6 +13,7 @@ export interface MatchOut {
   venue: string | null;
   status: string;
   result: ResultLetter | null;
+  is_approximate_date: boolean;
 }
 
 export interface MatchListResponse {
