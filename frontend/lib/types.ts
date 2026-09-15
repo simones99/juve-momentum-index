@@ -14,6 +14,8 @@ export interface MatchOut {
   status: string;
   result: ResultLetter | null;
   is_approximate_date: boolean;
+  home_crest_url: string | null;
+  away_crest_url: string | null;
 }
 
 export interface MatchListResponse {
@@ -102,6 +104,7 @@ export interface AwayFixtureOut {
   competition: string;
   stadium: string | null;
   stadium_city: string | null;
+  crest_url: string | null;
   distance_km: number | null;
   duration_hours: number | null;
   is_estimated: boolean;
