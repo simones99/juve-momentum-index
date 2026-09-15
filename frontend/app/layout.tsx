@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Oswald } from "next/font/google";
 import { SidebarNav } from "@/components/SidebarNav";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { PushOptIn } from "@/components/PushOptIn";
@@ -8,6 +9,13 @@ import { TEAM_NAME } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import "./globals.css";
+
+const oswald = Oswald({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale } = await getDictionary();
@@ -60,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const opponent = upcoming ? (upcoming.home_team === TEAM_NAME ? upcoming.away_team : upcoming.home_team) : null;
 
   return (
-    <html lang={dict.htmlLang}>
+    <html lang={dict.htmlLang} className={oswald.variable}>
       <body>
         <LocaleProvider locale={locale}>
           <div className="app-shell">
