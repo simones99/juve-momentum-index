@@ -165,6 +165,14 @@ modello con il risultato reale. La pagina "Le mie previsioni"
    `NEXT_PUBLIC_API_BASE_URL` sull'URL pubblico del backend Render e
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (richiedono un redeploy se cambiate, perché
    sono compilate a build time).
+4. **Refresh giornaliero (GitHub Actions)**: il workflow
+   `.github/workflows/scheduled-ingest.yml` gira ogni notte alle 2:00 UTC sul
+   codice di `main`, senza bisogno del Mac acceso o di Docker. Richiede due
+   secret del repository (Settings → Secrets and variables → Actions):
+   `NEON_DATABASE_URL` (connection string **diretta**, non pooled, di Neon) e
+   `FOOTBALL_DATA_API_KEY`. Verificalo con un run manuale
+   (`gh workflow run scheduled-ingest.yml` o dal tab Actions) prima di
+   fidartene: deve risultare verde.
 
 ## Fonti dati
 
