@@ -19,6 +19,7 @@ export interface Dictionary {
     noUpcoming: string;
   };
   footer: string;
+  footerUpdatedAt: (time: string) => string;
   common: {
     home: string;
     away: string;
@@ -191,6 +192,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     footer:
       "Dati indicativi da football-data.org (fallback Wikipedia). Progetto personale, non affiliato alla Juventus FC.",
+    footerUpdatedAt: (time) => `Dati aggiornati alle ${time}`,
     common: {
       home: "Casa",
       away: "Trasferta",
@@ -363,6 +365,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     footer:
       "Indicative data from football-data.org (Wikipedia fallback). Personal project, not affiliated with Juventus FC.",
+    footerUpdatedAt: (time) => `Data last updated at ${time}`,
     common: {
       home: "Home",
       away: "Away",

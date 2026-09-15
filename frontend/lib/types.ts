@@ -164,3 +164,8 @@ export interface PredictionCommunityStats {
   community_accuracy: number | null;
   model_accuracy: number | null;
 }
+
+export interface HealthzResponse {
+  status: string;
+  last_successful_ingest_at: string | null;
+}

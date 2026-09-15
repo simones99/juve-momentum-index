@@ -3,7 +3,7 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { PushOptIn } from "@/components/PushOptIn";
 import { LiveMatchBanner } from "@/components/LiveMatchBanner";
-import { getUpcomingMatches } from "@/lib/api";
+import { getHealthz, getUpcomingMatches } from "@/lib/api";
 import { TEAM_NAME } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
@@ -32,6 +32,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { locale, dict } = await getDictionary();
   const nextMatch = await getUpcomingMatches(1).catch(() => []);
   const upcoming = nextMatch[0];
+  const healthz = await getHealthz().catch(() => null);
+  const lastUpdated = healthz?.last_successful_ingest_at
+    ? new Date(healthz.last_successful_ingest_at).toLocaleTimeString(locale === "en" ? "en-GB" : "it-IT", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
   const opponent = upcoming ? (upcoming.home_team === TEAM_NAME ? upcoming.away_team : upcoming.home_team) : null;
 
   return (
@@ -90,7 +97,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {children}
             </main>
           </div>
-          <footer className="site-footer">{dict.footer}</footer>
+          <footer className="site-footer">
+            <div>{dict.footer}</div>
+            {lastUpdated && <div style={{ marginTop: 4 }}>{dict.footerUpdatedAt(lastUpdated)}</div>}
+          </footer>
         </LocaleProvider>
       </body>
     </html>

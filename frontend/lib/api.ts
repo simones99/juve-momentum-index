@@ -2,6 +2,7 @@ import type {
   AwayFixturesResponse,
   BriefResponse,
   CompetitionOut,
+  HealthzResponse,
   LiveMatchOut,
   MatchListResponse,
   MatchOut,
@@ -172,6 +173,10 @@ export function submitPrediction(
     { match_id: matchId, predicted_outcome: predictedOutcome },
     { "X-Device-Id": deviceId }
   );
+}
+
+export function getHealthz(): Promise<HealthzResponse> {
+  return apiFetch<HealthzResponse>("/healthz");
 }
 
 export { ApiError };
