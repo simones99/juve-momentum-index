@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.constants import TEAM_NAME, UPCOMING_MATCH_STATUSES
+from app.core.crests import CRESTS
 from app.core.stadiums import STADIUMS
 from app.db import get_db
 from app.features.travel import build_travel_estimate, estimate_fallback_travel
@@ -26,6 +27,7 @@ def _build_fixture_out(match: Match, from_coords: tuple[float, float]) -> AwayFi
         competition=match.competition,
         stadium=stadium_info.name if stadium_info else match.venue,
         stadium_city=stadium_info.city if stadium_info else None,
+        crest_url=CRESTS.get(match.home_team),
     )
 
     if stadium_info is None:

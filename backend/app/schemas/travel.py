@@ -17,6 +17,7 @@ class AwayFixtureOut(BaseModel):
     competition: str
     stadium: str | None
     stadium_city: str | None
+    crest_url: str | None
     distance_km: float | None
     duration_hours: float | None
     is_estimated: bool

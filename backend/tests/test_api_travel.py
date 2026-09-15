@@ -133,3 +133,18 @@ def test_away_fixtures_handles_unknown_stadium_gracefully(client, db, monkeypatc
     fixture = response.json()["fixtures"][0]
     assert fixture["distance_km"] is None
     assert fixture["effort_score"] is None
+
+
+def test_away_fixtures_includes_crest_url_for_known_opponent(client, db, monkeypatch):
+    monkeypatch.setattr(
+        travel_route.NominatimClient, "geocode", lambda self, q: (43.6158, 13.5189, "Ancona, Marche, Italia")
+    )
+    monkeypatch.setattr(travel_route.OsrmClient, "route", lambda self, *a: (300.0, 3.5))
+
+    db.add(_away_match(external_id="crest-fixture", home_team="SSC Napoli"))
+    db.commit()
+
+    response = client.get("/api/v1/travel/away-fixtures", params={"from_city": "Ancona"})
+    body = response.json()
+
+    assert body["fixtures"][0]["crest_url"] == "https://crests.football-data.org/113.png"
