@@ -19,6 +19,8 @@ class MatchOut(BaseModel):
     status: str
     result: str | None = None  # W/D/L from Juventus' perspective, None if not yet played
     is_approximate_date: bool = False
+    home_crest_url: str | None = None
+    away_crest_url: str | None = None
 
 
 class MatchListResponse(BaseModel):

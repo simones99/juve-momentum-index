@@ -292,3 +292,24 @@ def test_list_matches_flags_wikipedia_sourced_matches_as_approximate(client, db)
 
     assert by_source["Inter"] is False
     assert by_source["Milan"] is True
+
+
+def test_list_matches_includes_crest_urls_for_known_teams(client, db):
+    db.add(_make_match(external_id="crest-1", away_team="SSC Napoli"))
+    db.commit()
+
+    response = client.get("/api/v1/matches")
+    match = response.json()["items"][0]
+
+    assert match["home_crest_url"] == "https://crests.football-data.org/109.png"
+    assert match["away_crest_url"] == "https://crests.football-data.org/113.png"
+
+
+def test_list_matches_crest_url_is_null_for_unknown_team(client, db):
+    db.add(_make_match(external_id="crest-2", away_team="Some Historic Club FC"))
+    db.commit()
+
+    response = client.get("/api/v1/matches")
+    match = response.json()["items"][0]
+
+    assert match["away_crest_url"] is None

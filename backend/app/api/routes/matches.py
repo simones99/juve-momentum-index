@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.briefs.template_brief import _current_elo
 from app.core.constants import LIVE_MATCH_STATUSES, MATCH_STATUS_FINISHED, SOURCE_WIKIPEDIA, TEAM_NAME, UPCOMING_MATCH_STATUSES
+from app.core.crests import CRESTS
 from app.db import get_db
 from app.features.win_probability import adjust_live_probabilities, estimate_match_probabilities
 from app.models.match import Match
@@ -43,6 +44,8 @@ def match_to_out(m: Match) -> MatchOut:
         status=m.status,
         result=compute_result(m),
         is_approximate_date=m.source == SOURCE_WIKIPEDIA,
+        home_crest_url=CRESTS.get(m.home_team),
+        away_crest_url=CRESTS.get(m.away_team),
     )
 
 
