@@ -24,6 +24,30 @@
   --win: #34c759;
   --draw: #ff9f0a;
   --loss: #ff453a;
+
+  /* Numeri chiave: bianco puro, distinto da --text (usato per il body). */
+  --ink: #f5f5f7;
+
+  /* Pattern a strisce sottili per hero e separatori — introdotto qui,
+     usato a partire da Sviluppo #2 Fase B (Composizione): nessun
+     consumo in questo file finché l'hero non esiste. */
+  --stripe: repeating-linear-gradient(
+    90deg,
+    rgba(245, 245, 247, 0.06) 0px,
+    rgba(245, 245, 247, 0.06) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+
+  /* Scala tipografica esplicita (Sviluppo #2 punto 3) — display per
+     numeri/titoli hero (Fase B), body vicino all'attuale, label per le
+     etichette maiuscole già in uso (es. .kpi-card__label). */
+  --fs-display-1: 56px;
+  --fs-display-2: 40px;
+  --fs-display-3: 28px;
+  --fs-body-1: 15px;
+  --fs-body-2: 13px;
+  --fs-label: 11px;
 }
 
 * {
@@ -277,7 +301,7 @@ h2 {
 }
 
 .kpi-card__label {
-  font-size: 0.72rem;
+  font-size: var(--fs-label);
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -288,6 +312,7 @@ h2 {
   font-weight: 700;
   margin-top: 5px;
   letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 .streak-card {
