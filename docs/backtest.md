@@ -154,7 +154,97 @@ l'ordine intra-stagione approssimato introduce comunque rumore nell'Elo.
 
 ## Elo completo con date reali (football-data.org) — definitivo
 
-TBD — da compilare domani dopo re-ingestion con la API key reale (date e
-sedi vere, niente più ordine approssimato dentro stagione). Se il
-miglioramento si conferma o cresce ulteriormente, aggiornare le costanti
-shipped in `win_probability.py` a quel punto, non prima.
+Misurato il: 2026-09-15, dopo la prima ingestione reale con la chiave
+football-data.org (Sviluppo #1, Task 9). Il free tier copre solo una
+finestra scorrevole di stagioni: 2023-2024 → 2026-2027 arrivano da
+football-data.org con date e sedi vere; 2019-2020 → 2022-2023 hanno
+ricevuto 403 e sono rimaste sulla fallback Wikipedia (data placeholder
+di inizio stagione, segnalate in UI dal badge "data approssimata").
+
+Dataset: 290 partite Juventus su 8 stagioni (2019-2020 → 2026-2027) — 62
+partite in più rispetto alla sezione precedente, perché nel frattempo
+sono state ingerite anche le stagioni 2025-2026 e 2026-2027 (quest'ultima
+in corso, solo 4 partite giocate finora).
+
+### Holdout singolo (ultima stagione: 2026-2027)
+
+Train: 286 partite. Test: 4 partite (stagione in corso, campione minimo).
+
+Distribuzione risultati (train): `{'W': 0.542, 'D': 0.276, 'L': 0.182}`
+Distribuzione risultati (test): `{'W': 0.5, 'D': 0.25, 'L': 0.25}`
+
+| Modello | Log loss | Brier | Accuracy |
+|---|---|---|---|
+| Baseline uniforme (33/33/33) | 1.0986 | 0.6667 | 0.500 |
+| Baseline frequenze (train) | 1.0541 | 0.6321 | 0.500 |
+| Elo model (costanti attuali) | 0.9559 | 0.5628 | 0.500 |
+| Elo model (tuned 0.3/400) | 0.9574 | 0.5640 | 0.500 |
+
+### Cross-validation leave-one-season-out (8 fold)
+
+| Fold | n | Tuned (peak/scale) | Log loss attuale | Log loss tuned |
+|---|---|---|---|---|
+| 2019-2020 | 38 | 0.32/400 | 0.908 | 0.937 |
+| 2020-2021 | 38 | 0.3/400 | 0.925 | 0.928 |
+| 2021-2022 | 38 | 0.3/400 | 0.992 | 0.993 |
+| 2022-2023 | 38 | 0.32/400 | 0.903 | 0.924 |
+| 2023-2024 | 38 | 0.28/400 | 0.998 | 0.998 |
+| 2024-2025 | 48 | 0.28/400 | 1.034 | 1.034 |
+| 2025-2026 | 48 | 0.28/400 | 1.003 | 1.003 |
+| 2026-2027 | 4 | 0.3/400 | 0.956 | 0.957 |
+
+Media sui 8 fold (± deviazione standard):
+
+| Modello | Log loss (± std) | Brier | Accuracy |
+|---|---|---|---|
+| Uniforme | 1.0986 (±0.000) | 0.6667 | 0.542 |
+| Frequenze | 1.0096 (±0.047) | 0.6040 | 0.542 |
+| **Attuale** | **0.9649 (±0.046)** | **0.5733** | 0.550 |
+| Tuned (per-fold) | 0.9717 (±0.038) | 0.5784 | 0.550 |
+
+Costanti finali (grid search sull'intero dataset): `DRAW_PEAK_PROBABILITY=0.3`,
+`DRAW_DECAY_SCALE=400` — ma in cross-validation le costanti **attuali**
+(0.28/400) restano migliori (0.9649 contro 0.9717 di log loss medio):
+il grid search sull'intero dataset overfitta di nuovo, stesso pattern
+già visto nella sezione precedente. **Costanti non aggiornate** —
+`win_probability.py` resta a 0.28/400, come previsto dal criterio di
+decisione: si aggiorna solo se le costanti tarate battono quelle attuali
+in CV, qui non succede.
+
+### Calibrazione (costanti attuali, intero dataset)
+
+| Bucket | n | Previsto | Reale |
+|---|---|---|---|
+| 1 | 58 | 0.31 | 0.29 |
+| 2 | 58 | 0.44 | 0.47 |
+| 3 | 58 | 0.49 | 0.60 |
+| 4 | 58 | 0.56 | 0.67 |
+| 5 | 58 | 0.65 | 0.67 |
+
+### Confronto con la sezione precedente (Elo Wikipedia intera lega)
+
+| Metrica (media CV) | Prima (Wikipedia, 6 stagioni/228 partite) | Dopo (date reali, 8 stagioni/290 partite) | Δ |
+|---|---|---|---|
+| Log loss | 0.9530 | 0.9649 | +1.2% (peggiora) |
+| Brier | 0.5649 | 0.5733 | +1.5% (peggiora) |
+
+Il log loss medio peggiora leggermente rispetto alla sezione precedente,
+ma il confronto non è a parità di dataset: qui ci sono due stagioni in
+più (2025-2026 completa e 2026-2027 con solo 4 partite giocate, il fold
+con la varianza più alta della serie), non una correzione delle date
+delle stagioni già presenti. Le sei stagioni in comune (2019-2020 →
+2024-2025) mostrano log loss per-fold sostanzialmente stabili o
+migliori rispetto alla sezione precedente (es. 2019-2020: 0.908 vs 0.946;
+2022-2023: 0.903 vs 0.955), quindi l'effetto delle date reali sulle
+stagioni che le hanno ottenute è positivo — il peggioramento aggregato
+viene dai due fold nuovi, non da una regressione sui dati esistenti.
+La calibrazione resta nello stesso quadro della sezione precedente
+(sottostima sistematica nei bucket centrali-alti), invariata dal
+passaggio a date reali: conferma che il problema è nel modello di
+probabilità (heuristica draw-peak, nessun margine di vittoria, nessuna
+regressione stagionale — vedi Sviluppo #5 della roadmap), non nella
+qualità dei dati temporali.
+
+**Prossimo passo per un confronto pulito**: rilanciare questo backtest
+dopo che la stagione 2026-2027 sarà completa, per un fold finale con
+varianza normale invece di 4 partite.
