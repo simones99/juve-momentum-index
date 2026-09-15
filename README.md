@@ -85,7 +85,16 @@ docker compose up backend frontend  # dashboard su http://localhost:3000, API su
 Il database Postgres gira come servizio `db` nello stesso `docker-compose.yml`,
 con un volume persistente (`pgdata`) così i dati sopravvivono al rebuild.
 
-Per aggiornare i dati periodicamente: `docker compose run --rm ingest`.
+> **Un solo Postgres alla volta.** Sia il Postgres Homebrew (`localhost:5432` di
+> sistema) sia il container `db` di `docker-compose.yml` ascoltano sulla stessa
+> porta 5432: se sono entrambi attivi, quale dei due risponde dipende da quale è
+> partito per primo, e i due database divergono silenziosamente. Usa il
+> container `db` come fonte di verità (è quello scritto dal job di ingestion in
+> `docker compose run --rm ingest` e dal workflow GitHub Actions — vedi sotto):
+> se lavori senza Docker, ferma `brew services stop postgresql@16` prima di
+> avviare `docker compose up`.
+
+Per aggiornare i dati periodicamente: `docker compose run --build --rm ingest`.
 
 Su macOS c'è anche un refresh automatico giornaliero (alle 3:00, quando le
 partite del giorno sono già finite) via `launchd`:
@@ -146,6 +155,10 @@ modello con il risultato reale. La pagina "Le mie previsioni"
 
 1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per
    `DATABASE_URL` del backend, quella diretta per lanciare le migration Alembic.
+   Neon fornisce l'URL con lo schema `postgresql://...`: cambialo in
+   `postgresql+psycopg://...` prima di usarlo, perché il backend ha installato
+   psycopg3 (`psycopg[binary]`) e non psycopg2 — con lo schema originale
+   l'app va in crash all'avvio con `ModuleNotFoundError: No module named 'psycopg2'`.
 2. **Render**: nuovo Web Service da Docker, root directory `backend/`, health
    check `/healthz`. Configura `DATABASE_URL`, `FOOTBALL_DATA_API_KEY`,
    `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
@@ -156,6 +169,15 @@ modello con il risultato reale. La pagina "Le mie previsioni"
    `NEXT_PUBLIC_API_BASE_URL` sull'URL pubblico del backend Render e
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (richiedono un redeploy se cambiate, perché
    sono compilate a build time).
+4. **Refresh giornaliero (GitHub Actions)**: il workflow
+   `.github/workflows/scheduled-ingest.yml` gira ogni notte alle 2:00 UTC sul
+   codice di `main`, senza bisogno del Mac acceso o di Docker. Richiede due
+   secret del repository (Settings → Secrets and variables → Actions):
+   `NEON_DATABASE_URL` (connection string **diretta**, non pooled, di Neon —
+   ricorda di cambiarne lo schema in `postgresql+psycopg://` come sopra) e
+   `FOOTBALL_DATA_API_KEY`. Verificalo con un run manuale
+   (`gh workflow run scheduled-ingest.yml` o dal tab Actions) prima di
+   fidartene: deve risultare verde.
 
 ## Fonti dati
 

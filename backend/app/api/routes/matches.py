@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.briefs.template_brief import _current_elo
-from app.core.constants import LIVE_MATCH_STATUSES, MATCH_STATUS_FINISHED, TEAM_NAME, UPCOMING_MATCH_STATUSES
+from app.core.constants import LIVE_MATCH_STATUSES, MATCH_STATUS_FINISHED, SOURCE_WIKIPEDIA, TEAM_NAME, UPCOMING_MATCH_STATUSES
 from app.db import get_db
 from app.features.win_probability import adjust_live_probabilities, estimate_match_probabilities
 from app.models.match import Match
@@ -42,6 +42,7 @@ def match_to_out(m: Match) -> MatchOut:
         venue=m.venue,
         status=m.status,
         result=compute_result(m),
+        is_approximate_date=m.source == SOURCE_WIKIPEDIA,
     )
 
 

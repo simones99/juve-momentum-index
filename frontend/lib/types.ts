@@ -13,6 +13,7 @@ export interface MatchOut {
   venue: string | null;
   status: string;
   result: ResultLetter | null;
+  is_approximate_date: boolean;
 }
 
 export interface MatchListResponse {
@@ -162,4 +163,9 @@ export interface PredictionCommunityStats {
   model_correct: number;
   community_accuracy: number | null;
   model_accuracy: number | null;
+}
+
+export interface HealthzResponse {
+  status: string;
+  last_successful_ingest_at: string | null;
 }

@@ -9,6 +9,7 @@ from app.ingestion.ingest import (
     default_seasons,
     update_matches,
 )
+from app.models.ingest_run import IngestRun
 from app.models.match import Match
 
 
@@ -139,3 +140,23 @@ def test_football_data_failure_for_one_season_falls_back_instead_of_crashing_who
     row = db.scalar(select(Match).where(Match.season == "2019-2020"))
     assert row is not None
     assert row.source == SOURCE_WIKIPEDIA
+
+
+def test_update_matches_records_a_successful_ingest_run(db, monkeypatch):
+    monkeypatch.setattr("app.ingestion.ingest.SessionLocal", lambda: db)
+    monkeypatch.setattr(db, "close", lambda: None)
+
+    raw_matches = [
+        _raw_match(1, "Juventus FC", "SSC Napoli", 2, 0, "2024-09-08T18:45:00Z"),
+        _raw_match(2, "AC Milan", "Inter Milan", 1, 1, "2024-09-01T18:45:00Z"),
+    ]
+    monkeypatch.setattr(FootballDataClient, "get_competition_matches", lambda self, code, season: raw_matches)
+
+    update_matches(seasons=["2024-2025"], competitions=[COMPETITION_SERIE_A])
+
+    run = db.scalar(select(IngestRun).order_by(IngestRun.id.desc()))
+    assert run is not None
+    assert run.status == "success"
+    assert run.matches_upserted == 2
+    assert run.source_summary == "football-data:2"
+    assert run.finished_at >= run.started_at

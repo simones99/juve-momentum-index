@@ -443,6 +443,14 @@ tbody tr:last-child td {
   color: var(--text-muted);
 }
 
+.badge--approx {
+  background: rgba(205, 176, 121, 0.12);
+  border: 1px solid var(--accent-border);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: none;
+}
+
 .badge--live {
   background: var(--loss);
   gap: 5px;

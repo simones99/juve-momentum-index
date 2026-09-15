@@ -36,7 +36,14 @@ export function MatchTable({ matches }: { matches: MatchOut[] }) {
       <tbody>
         {matches.map((m) => (
           <tr key={m.id} onClick={() => router.push(`/matches/${m.id}`)}>
-            <td>{formatDate(m.match_date, locale)}</td>
+            <td>
+              {formatDate(m.match_date, locale)}
+              {m.is_approximate_date && (
+                <span className="badge badge--approx" style={{ marginLeft: 6 }} title={dict.matches.table.approximateDate}>
+                  {dict.matches.table.approximateDate}
+                </span>
+              )}
+            </td>
             <td>{m.competition_code}</td>
             <td>{m.home_team}</td>
             <td>{m.away_team}</td>

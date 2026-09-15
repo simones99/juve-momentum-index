@@ -3,11 +3,14 @@ into the `matches` table, keyed by external_id when available, otherwise by
 the natural key (season, competition_code, home_team, away_team, match_date).
 """
 
+from datetime import datetime
+
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.constants import SOURCE_WIKIPEDIA
 from app.ingestion.normalize import MatchIn
+from app.models.ingest_run import IngestRun
 from app.models.match import Match
 
 
@@ -70,3 +73,23 @@ def delete_wikipedia_rows_for_season(db: Session, season: str, competition_code:
         )
     )
     return result.rowcount
+
+
+def record_ingest_run(
+    db: Session,
+    *,
+    started_at: datetime,
+    finished_at: datetime,
+    status: str,
+    matches_upserted: int,
+    source_summary: str,
+) -> IngestRun:
+    run = IngestRun(
+        started_at=started_at,
+        finished_at=finished_at,
+        status=status,
+        matches_upserted=matches_upserted,
+        source_summary=source_summary,
+    )
+    db.add(run)
+    return run

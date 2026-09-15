@@ -19,6 +19,8 @@ export interface Dictionary {
     noUpcoming: string;
   };
   footer: string;
+  footerUpdatedAt: (time: string) => string;
+  footerUpdatedAtOn: (date: string, time: string) => string;
   common: {
     home: string;
     away: string;
@@ -72,6 +74,7 @@ export interface Dictionary {
       away: string;
       result: string;
       outcome: string;
+      approximateDate: string;
     };
     emptyState: string;
     pagination: {
@@ -190,6 +193,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     footer:
       "Dati indicativi da football-data.org (fallback Wikipedia). Progetto personale, non affiliato alla Juventus FC.",
+    footerUpdatedAt: (time) => `Dati aggiornati alle ${time}`,
+    footerUpdatedAtOn: (date, time) => `Dati aggiornati il ${date} alle ${time}`,
     common: {
       home: "Casa",
       away: "Trasferta",
@@ -243,6 +248,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         away: "Trasferta",
         result: "Risultato",
         outcome: "Esito",
+        approximateDate: "Data approssimata",
       },
       emptyState: "Nessuna partita trovata con questi filtri.",
       pagination: {
@@ -361,6 +367,8 @@ export const dictionaries: Record<Locale, Dictionary> = {
     },
     footer:
       "Indicative data from football-data.org (Wikipedia fallback). Personal project, not affiliated with Juventus FC.",
+    footerUpdatedAt: (time) => `Data last updated at ${time}`,
+    footerUpdatedAtOn: (date, time) => `Data last updated on ${date} at ${time}`,
     common: {
       home: "Home",
       away: "Away",
@@ -414,6 +422,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
         away: "Away",
         result: "Score",
         outcome: "Outcome",
+        approximateDate: "Approximate date",
       },
       emptyState: "No matches found with these filters.",
       pagination: {

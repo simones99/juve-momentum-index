@@ -3,7 +3,7 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { PushOptIn } from "@/components/PushOptIn";
 import { LiveMatchBanner } from "@/components/LiveMatchBanner";
-import { getUpcomingMatches } from "@/lib/api";
+import { getHealthz, getUpcomingMatches } from "@/lib/api";
 import { TEAM_NAME } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
@@ -28,10 +28,35 @@ function formatNextMatchDate(iso: string, locale: string): string {
   });
 }
 
+// YYYY-MM-DD for `date` as seen in Europe/Rome, for same-day comparisons that
+// don't fall prey to UTC-vs-Rome day-boundary drift.
+function formatDateKeyInRome(date: Date): string {
+  return date.toLocaleDateString("en-CA", { timeZone: "Europe/Rome" });
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, dict } = await getDictionary();
-  const nextMatch = await getUpcomingMatches(1).catch(() => []);
+  const [nextMatch, healthz] = await Promise.all([
+    getUpcomingMatches(1).catch(() => []),
+    getHealthz().catch(() => null),
+  ]);
   const upcoming = nextMatch[0];
+  const ingestDate = healthz?.last_successful_ingest_at ? new Date(healthz.last_successful_ingest_at) : null;
+  const lastUpdatedTime = ingestDate
+    ? ingestDate.toLocaleTimeString(locale === "en" ? "en-GB" : "it-IT", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Rome",
+      })
+    : null;
+  const lastUpdatedDate =
+    ingestDate && formatDateKeyInRome(ingestDate) !== formatDateKeyInRome(new Date())
+      ? ingestDate.toLocaleDateString(locale === "en" ? "en-GB" : "it-IT", {
+          day: "2-digit",
+          month: "short",
+          timeZone: "Europe/Rome",
+        })
+      : null;
   const opponent = upcoming ? (upcoming.home_team === TEAM_NAME ? upcoming.away_team : upcoming.home_team) : null;
 
   return (
@@ -90,7 +115,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {children}
             </main>
           </div>
-          <footer className="site-footer">{dict.footer}</footer>
+          <footer className="site-footer">
+            <div>{dict.footer}</div>
+            {lastUpdatedTime && (
+              <div style={{ marginTop: 4 }}>
+                {lastUpdatedDate
+                  ? dict.footerUpdatedAtOn(lastUpdatedDate, lastUpdatedTime)
+                  : dict.footerUpdatedAt(lastUpdatedTime)}
+              </div>
+            )}
+          </footer>
         </LocaleProvider>
       </body>
     </html>

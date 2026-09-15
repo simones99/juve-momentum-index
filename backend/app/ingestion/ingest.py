@@ -21,6 +21,8 @@ from app.config import get_settings
 from app.core.constants import (
     COMPETITION_SERIE_A,
     MATCH_STATUS_FINISHED,
+    SOURCE_FOOTBALL_DATA,
+    SOURCE_WIKIPEDIA,
     SUPPORTED_COMPETITIONS,
     TEAM_NAME,
     UPCOMING_MATCH_STATUSES,
@@ -29,7 +31,7 @@ from app.db import SessionLocal
 from app.features.recompute import recompute_all_derived
 from app.ingestion.football_data_client import FootballDataClient, FootballDataError
 from app.ingestion.normalize import normalize_football_data_match, normalize_wikipedia_row
-from app.ingestion.repository import delete_wikipedia_rows_for_season, upsert_match
+from app.ingestion.repository import delete_wikipedia_rows_for_season, record_ingest_run, upsert_match
 from app.ingestion.wikipedia_scraper import scrape_serie_a_season
 from app.models.juve_momentum import JuveMomentum
 from app.models.match import Match
@@ -189,6 +191,8 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
     competitions = competitions or SUPPORTED_COMPETITIONS
 
     db: Session = SessionLocal()
+    started_at = datetime.now(timezone.utc)
+    source_counts: dict[str, int] = {}
     try:
         client = FootballDataClient(api_key=settings.football_data_api_key)
 
@@ -196,6 +200,7 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
             for competition_code in competitions:
                 try:
                     count = _ingest_competition_from_football_data(db, client, competition_code, season)
+                    source_counts[SOURCE_FOOTBALL_DATA] = source_counts.get(SOURCE_FOOTBALL_DATA, 0) + count
                     logger.info(
                         "season %s %s: ingested %d matches from football-data.org",
                         season, competition_code, count,
@@ -209,6 +214,7 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
                     )
                     if has_fallback:
                         count = _ingest_season_from_wikipedia(db, season)
+                        source_counts[SOURCE_WIKIPEDIA] = source_counts.get(SOURCE_WIKIPEDIA, 0) + count
                         logger.info("season %s: ingested %d matches from Wikipedia fallback", season, count)
 
         db.commit()
@@ -220,6 +226,16 @@ def update_matches(seasons: list[str] | None = None, competitions: list[str] | N
         _resolve_finished_predictions(db)
         _notify_brief_ready(db)
         _notify_momentum_swing(db)
+
+        record_ingest_run(
+            db,
+            started_at=started_at,
+            finished_at=datetime.now(timezone.utc),
+            status="success",
+            matches_upserted=sum(source_counts.values()),
+            source_summary=", ".join(f"{k}:{v}" for k, v in sorted(source_counts.items())) or "none",
+        )
+        db.commit()
     finally:
         db.close()
 
