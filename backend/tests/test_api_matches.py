@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 import pytest
 
 import app.api.routes.matches as matches_routes
-from app.core.constants import COMPETITION_SERIE_A, SOURCE_FOOTBALL_DATA, TEAM_NAME
+from app.core.constants import COMPETITION_SERIE_A, SOURCE_FOOTBALL_DATA, SOURCE_WIKIPEDIA, TEAM_NAME
 from app.models.match import Match
 
 TODAY = date(2024, 3, 15)
@@ -280,3 +280,15 @@ def test_live_match_ignores_matches_not_scheduled_today(client, db, monkeypatch)
 
     response = client.get("/api/v1/matches/live")
     assert response.json() is None
+
+
+def test_list_matches_flags_wikipedia_sourced_matches_as_approximate(client, db):
+    db.add(_make_match(external_id="fd-1", source=SOURCE_FOOTBALL_DATA))
+    db.add(_make_match(external_id="wiki-1", source=SOURCE_WIKIPEDIA, away_team="Milan"))
+    db.commit()
+
+    response = client.get("/api/v1/matches")
+    by_source = {m["away_team"]: m["is_approximate_date"] for m in response.json()["items"]}
+
+    assert by_source["Inter"] is False
+    assert by_source["Milan"] is True
