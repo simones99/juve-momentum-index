@@ -187,6 +187,11 @@ modello con il risultato reale. La pagina "Le mie previsioni"
 
 - [football-data.org](https://www.football-data.org/) (free tier, 10
   richieste/minuto) — fonte primaria per Serie A e Champions League.
+  I termini ([pagina about](https://www.football-data.org/about)) chiedono
+  l'attribuzione "Football data provided by the Football-Data.org API", che
+  compare nel footer dell'app, e lasciano all'utente i diritti sugli stemmi.
+  Gli stemmi sono quindi nascosti di default: `NEXT_PUBLIC_SHOW_CRESTS=true`
+  li mostra, da usare solo se si hanno quei diritti.
 - Wikipedia (pagine "20XX-YY Serie A") — fallback automatico solo per Serie A,
   usato se l'API fallisce o esaurisce la quota per una stagione.
 - [Nominatim](https://nominatim.org/) (OpenStreetMap) — geocoding gratuito

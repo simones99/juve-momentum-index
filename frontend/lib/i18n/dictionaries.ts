@@ -192,7 +192,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       noUpcoming: "Nessuna partita in programma",
     },
     footer:
-      "Dati indicativi da football-data.org (fallback Wikipedia). Progetto personale, non affiliato alla Juventus FC.",
+      "Football data provided by the Football-Data.org API (fallback Wikipedia). Dati indicativi. Progetto personale, non affiliato alla Juventus FC.",
     footerUpdatedAt: (time) => `Dati aggiornati alle ${time}`,
     footerUpdatedAtOn: (date, time) => `Dati aggiornati il ${date} alle ${time}`,
     common: {
@@ -366,7 +366,7 @@ export const dictionaries: Record<Locale, Dictionary> = {
       noUpcoming: "No match scheduled",
     },
     footer:
-      "Indicative data from football-data.org (Wikipedia fallback). Personal project, not affiliated with Juventus FC.",
+      "Football data provided by the Football-Data.org API (Wikipedia fallback). Indicative data. Personal project, not affiliated with Juventus FC.",
     footerUpdatedAt: (time) => `Data last updated at ${time}`,
     footerUpdatedAtOn: (date, time) => `Data last updated on ${date} at ${time}`,
     common: {

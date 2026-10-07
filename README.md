@@ -61,7 +61,7 @@ Next.js dashboard  ──HTTP──▶  FastAPI backend  ──SQLAlchemy──�
 
 | Source | Used for | Notes on terms |
 |---|---|---|
-| [football-data.org](https://www.football-data.org/) API v4 | Primary source: every Serie A (`SA`) and Champions League (`CL`) match, with dates, venues and status | Needs a personal API key. The free tier is limited to 10 requests/minute and a rolling window of about four seasons; older seasons return HTTP 403. Club crest images are linked from football-data.org's CDN and are not stored here. Check football-data.org's own terms before any commercial use or redistribution of its data. |
+| [football-data.org](https://www.football-data.org/) API v4 | Primary source: every Serie A (`SA`) and Champions League (`CL`) match, with dates, venues and status | Needs a personal API key. The free tier is limited to 10 requests/minute and a rolling window of about four seasons; older seasons return HTTP 403. Its terms ([about page](https://www.football-data.org/about)) require the attribution "Football data provided by the Football-Data.org API", shown in the app footer, and leave the rights to club logos to the user. Crest images are therefore hidden by default; set `NEXT_PUBLIC_SHOW_CRESTS=true` only if you hold those rights. They are linked from football-data.org's CDN, never stored here. |
 | Wikipedia, "20XX–YY Serie A" season pages ([example](https://en.wikipedia.org/wiki/2021%E2%80%9322_Serie_A)) | Fallback for Serie A results only, used when the API call for a season fails | Wikipedia text is licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Only match results (facts) are extracted. The pages give no per-match date, so these rows get a season-start placeholder date that the UI flags as approximate. |
 | [Nominatim](https://nominatim.org/) (OpenStreetMap) | Geocoding the user's starting city on the Away Trips page | Subject to the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/): low request volume and an identifying User-Agent. Data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright). |
 | [OSRM](https://project-osrm.org/) public demo server | Driving distance and time for Away Trips | The demo server has no SLA and is not meant for production traffic. If it cannot be reached, the app falls back to a straight-line estimate and marks it `is_estimated`. |
@@ -275,7 +275,8 @@ variables go in `backend/.env` (template: `backend/.env.example`):
 `LLM_TIMEOUT_SECONDS`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
 `VAPID_SUBJECT`, `BACKEND_URL`. Frontend variables go in
 `frontend/.env.local` (template: `frontend/.env.local.example`):
-`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+`NEXT_PUBLIC_SHOW_CRESTS` (default off, see the data sources table).
 
 ```bash
 cd backend
