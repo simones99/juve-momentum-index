@@ -1,11 +1,16 @@
 """Elo rating calculation.
 
-Limitation: because the dataset only contains Juventus matches (not the full
-Serie A / Champions League schedule), this is not a true historical multi-team
-Elo — every opponent starts from INITIAL_ELO the first time it appears in the
-dataset rather than carrying a "real" rating from matches we never ingested.
-This mirrors the simplification in the original MVP plan (docs/legacy-mvp-plan.md)
-but is called out explicitly here and in the README.
+Ratings are computed over every ingested match (the full Serie A and
+Champions League schedules for the ingested seasons, not only Juventus'
+fixtures; see app/ingestion/ingest.py), in chronological order.
+
+Limitations, also listed in the README:
+  - Every team starts from INITIAL_ELO at its first appearance in the
+    ingested window; there is no prior history before the first season.
+  - Constant K, outcome-only updates (no goal-margin multiplier) and no
+    regression towards the mean between seasons.
+  - Non-Italian Champions League clubs only appear in CL matches, so their
+    ratings rest on few games and are not comparable to domestic ratings.
 """
 
 from dataclasses import dataclass

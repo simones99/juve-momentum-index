@@ -11,7 +11,7 @@ would silently break that matching.
 
 This map is necessarily incomplete: it's built from general knowledge of
 common club-name variants, not from a real football-data.org response (no
-API key configured yet — see docs/plan-fase-2-elo-completo.md). Once a key
+API key was configured when it was first written). Once a key
 is available, run `scripts/check_team_names.py` against a real ingestion to
 find any unmapped names and extend ALIASES below.
 

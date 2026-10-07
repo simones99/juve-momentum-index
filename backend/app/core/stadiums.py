@@ -1,5 +1,5 @@
 """Static reference data: stadium name/city/coordinates for the clubs seen in
-the ingested dataset (see docs/legacy-mvp-plan.md era teams + current Serie A).
+the ingested dataset (Serie A clubs from the seasons covered by the data).
 This doesn't change often enough to warrant a DB table or an ingestion step —
 a plain dict is simpler and doesn't depend on any external service being up.
 

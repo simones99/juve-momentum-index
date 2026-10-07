@@ -27,3 +27,14 @@ frontend/*.tsbuildinfo
 
 # Local artifacts
 *.log
+
+# Internal planning / agent working files (kept locally, not published)
+docs/superpowers/
+docs/session-handoff-*.md
+docs/legacy-mvp-plan.md
+docs/analisi-prodotto-*.md
+docs/plan-*.md
+CLAUDE.md
+AGENTS.md
+.claude/
+logs/

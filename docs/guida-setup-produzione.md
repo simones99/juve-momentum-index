@@ -2,7 +2,7 @@
 
 Data: 2026-09-10
 Scopo: checklist passo-passo per portare Juventum online (Sviluppo #1
-della roadmap in `docs/analisi-prodotto-2026-09-09.md`). Nessun
+della roadmap interna). Nessun
 passaggio richiede scrivere codice — solo account e configurazione.
 Il workflow GitHub Actions per il refresh dati va scritto dopo, in
 sessione separata (è codice, non setup account).
@@ -78,5 +78,3 @@ sessione di brainstorming per:
 - tabella `ingest_runs` e `last_successful_ingest_at` su `/healthz`
   per la freschezza dati visibile in UI
 
-Riferimento completo: sezione "1. Dati vivi e messa in produzione" in
-`docs/analisi-prodotto-2026-09-09.md`.

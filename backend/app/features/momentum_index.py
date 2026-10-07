@@ -2,7 +2,7 @@
 
     momentum_index = 0.5 * elo_normalized + 0.25 * points_norm + 0.25 * goal_diff_norm
 
-Deviation from docs/legacy-mvp-plan.md: the original formula weighted a 0-100
+Deviation from the original MVP design: the original formula weighted a 0-100
 elo_normalized value against raw points-per-game (0-3) and raw goal difference
 (unbounded), which are on incompatible scales and would let Elo dominate the
 index almost entirely. Here points_rolling5 and goal_diff_rolling5 are also

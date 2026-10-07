@@ -1,0 +1,261 @@
+# Juve Momentum Index
+
+![CI](https://github.com/simones99/juve-momentum-index/actions/workflows/ci.yml/badge.svg)
+
+Un **Momentum Index** per la Juventus — un punteggio 0-100 che combina Elo e forma
+recente — esposto in una dashboard con andamento nel tempo, storico partite e una
+feature **Match Brief**: un recap pre/post-partita generato da template dati e,
+quando configurato, arricchito da un LLM via [OpenRouter](https://openrouter.ai/).
+
+_English version: [README.md](README.md)._
+
+- **Demo live**: non ancora deployata.
+
+![Overview della dashboard](docs/screenshots/overview.png)
+
+## Cosa fa
+
+- Calcola un rating **Elo** partita per partita per la Juventus (Serie A + Champions
+  League, ultime stagioni), con home advantage e K-factor configurabili.
+- Combina l'Elo normalizzato con la forma recente (punti e differenza reti su
+  finestre di 5/10 partite) in un **Momentum Index** 0-100.
+- Genera un **brief testuale** pre-partita (forma recente, trend Elo, precedenti
+  contro l'avversario, **probabilità di vittoria/pareggio/sconfitta**) o post-partita
+  (confronto tra la prestazione e la media recente, più l'esito che il modello
+  avrebbe previsto), con arricchimento opzionale via LLM (OpenRouter) e fallback
+  automatico a testo template se l'LLM non è disponibile.
+- Dashboard Next.js con 4 viste: Overview, Momentum Details, Matches, Match Brief.
+- Sezione **Prossime partite** in Overview con data, orario e stadio (richiede
+  ingestion via football-data.org: il fallback Wikipedia copre solo risultati
+  passati, non calendario/sede delle prossime gare).
+- Pagina **Trasferte**: cerchi la tua città di partenza (geocoding via
+  Nominatim/OpenStreetMap) e ottieni le prossime trasferte della Juve ordinate
+  per difficoltà — distanza e **tempo di guida reale** (routing su rete
+  stradale via OSRM, non una stima a velocità media), con indicazione se
+  andata/ritorno in giornata è ragionevolmente fattibile.
+
+## Architettura
+
+```
+Next.js (Vercel)  ──HTTP──▶  FastAPI (Render, Docker)  ──▶  Postgres (Neon)
+                                     │
+                                     ├─ ingestion: football-data.org (primaria)
+                                     │             + fallback scraping Wikipedia
+                                     ├─ brief: template Python + OpenRouter (opzionale)
+                                     └─ trasferte: Nominatim (geocoding) + OSRM (routing reale)
+```
+
+- **Backend**: FastAPI + SQLAlchemy + Alembic, Python 3.11+.
+- **Frontend**: Next.js (App Router) + TypeScript + Recharts.
+- **Database**: Postgres (stesso engine in dev e produzione).
+- **Deploy**: Vercel (frontend) + Render (backend, da Dockerfile) + Neon (Postgres).
+
+## Setup locale — senza Docker
+
+Richiede Python 3.11+, Node 20+, e un Postgres locale raggiungibile (es. via
+Homebrew: `brew install postgresql@16 && brew services start postgresql@16`, poi
+crea un DB/utente `juventum`).
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env   # compila almeno DATABASE_URL
+alembic upgrade head
+python -m app.ingestion.ingest   # default: current season + prior ones, computed from today's date
+uvicorn app.main:app --reload
+```
+
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
+
+Apri `http://localhost:3000`.
+
+## Setup locale — con Docker
+
+```bash
+docker compose build
+docker compose run --rm ingest      # scarica/aggiorna i dati la prima volta
+docker compose up backend frontend  # dashboard su http://localhost:3000, API su :8000
+```
+
+Il database Postgres gira come servizio `db` nello stesso `docker-compose.yml`,
+con un volume persistente (`pgdata`) così i dati sopravvivono al rebuild.
+
+> **Un solo Postgres alla volta.** Sia il Postgres Homebrew (`localhost:5432` di
+> sistema) sia il container `db` di `docker-compose.yml` ascoltano sulla stessa
+> porta 5432: se sono entrambi attivi, quale dei due risponde dipende da quale è
+> partito per primo, e i due database divergono silenziosamente. Usa il
+> container `db` come fonte di verità (è quello scritto dal job di ingestion in
+> `docker compose run --rm ingest` e dal workflow GitHub Actions — vedi sotto):
+> se lavori senza Docker, ferma `brew services stop postgresql@16` prima di
+> avviare `docker compose up`.
+
+Per aggiornare i dati periodicamente: `docker compose run --build --rm ingest`.
+
+Su macOS c'è anche un refresh automatico giornaliero (alle 3:00, quando le
+partite del giorno sono già finite) via `launchd`:
+`scripts/scheduled_ingest.sh` + `scripts/com.juventum.scheduled-ingest.plist`
+(installato in `~/Library/LaunchAgents`). Avvia Docker Desktop e il
+container `db` solo se non sono già in esecuzione, e li ferma di nuovo se
+li ha avviati lui — non disturba una sessione `docker compose up` già
+attiva. Log in `logs/scheduled-ingest.log`. Per disabilitarlo:
+`launchctl unload ~/Library/LaunchAgents/com.juventum.scheduled-ingest.plist`.
+
+C'è anche un secondo job, più frequente (ogni ~2,5 minuti, tutto il giorno),
+che aggiorna punteggio/stato delle partite della Juve **in corso** senza
+toccare Docker: `scripts/scheduled_live_poll.sh` +
+`scripts/com.juventum.scheduled-live-poll.plist` chiama semplicemente
+`POST /api/v1/admin/poll-live` sul backend (richiede `ADMIN_TOKEN` in
+`backend/.env`; `BACKEND_URL` nello stesso file punta al backend da
+interrogare, locale o quello in produzione). Nei giorni senza partite Juve
+il costo è una singola query al DB, non una chiamata a football-data.org.
+Log in `logs/scheduled-live-poll.log`.
+
+## Notifiche push
+
+L'app può inviare notifiche push del browser (senza account, senza login) per
+tre eventi: fischio d'inizio di una partita Juve, Match Brief pronto per la
+prossima partita (entro ~48h), swing significativo del Momentum Index. Serve
+una coppia di chiavi VAPID, generabile con `npx web-push generate-vapid-keys`:
+
+- Backend (`backend/.env`): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT` (un `mailto:` di contatto). Se lasciate vuote, l'iscrizione
+  funziona comunque ma l'invio effettivo delle notifiche è disattivato (no-op).
+- Frontend (`frontend/.env.local`): `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — deve
+  coincidere con `VAPID_PUBLIC_KEY` del backend.
+
+Il toggle "Attiva notifiche" in sidebar registra un service worker
+(`frontend/public/sw.js`) e richiede il permesso di notifica al browser
+(funziona anche in locale su `localhost`, non serve HTTPS). L'evento
+"fischio d'inizio" si aggancia al poller del Live Matchday Mode: se si
+disabilita quel job, resta comunque disponibile Brief pronto/Momentum swing
+(agganciati al refresh giornaliero dei dati).
+
+## Pronostici "Batti il modello"
+
+Ogni visitatore (nessun account) può pronosticare 1/X/2 per la prossima
+partita Juve prima del fischio d'inizio, sfidando il modello Elo esistente.
+L'identità è un cookie anonimo `device_id`, generato al primo accesso da
+`frontend/proxy.ts` (il file `proxy.js`/`.ts` di Next.js 16 — non più
+`middleware.js`, deprecato in questa versione) e letto lato server da
+`frontend/lib/deviceId.ts`.
+
+Al momento dell'invio viene salvato uno snapshot delle probabilità del
+modello (`estimate_match_probabilities`, le stesse usate dal Match Brief);
+quando la partita finisce, `resolve_predictions` (agganciato a
+`update_matches`) confronta sia il pronostico dell'utente sia l'argmax del
+modello con il risultato reale. La pagina "Le mie previsioni"
+(`/pronostici`) mostra l'accuratezza aggregata "tu vs modello".
+
+## Deploy in produzione
+
+1. **Neon**: crea un progetto Postgres, usa la connection string *pooled* per
+   `DATABASE_URL` del backend, quella diretta per lanciare le migration Alembic.
+   Neon fornisce l'URL con lo schema `postgresql://...`: cambialo in
+   `postgresql+psycopg://...` prima di usarlo, perché il backend ha installato
+   psycopg3 (`psycopg[binary]`) e non psycopg2 — con lo schema originale
+   l'app va in crash all'avvio con `ModuleNotFoundError: No module named 'psycopg2'`.
+2. **Render**: nuovo Web Service da Docker, root directory `backend/`, health
+   check `/healthz`. Configura `DATABASE_URL`, `FOOTBALL_DATA_API_KEY`,
+   `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+   `ENABLE_LLM_BRIEF`, `CORS_ORIGINS`, `ADMIN_TOKEN`, `VAPID_PUBLIC_KEY`,
+   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Dopo il primo deploy lancia
+   l'ingestion una volta via Render Shell.
+3. **Vercel**: importa `frontend/` come root directory, imposta
+   `NEXT_PUBLIC_API_BASE_URL` sull'URL pubblico del backend Render e
+   `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (richiedono un redeploy se cambiate, perché
+   sono compilate a build time).
+4. **Refresh giornaliero (GitHub Actions)**: il workflow
+   `.github/workflows/scheduled-ingest.yml` gira ogni notte alle 2:00 UTC sul
+   codice di `main`, senza bisogno del Mac acceso o di Docker. Richiede due
+   secret del repository (Settings → Secrets and variables → Actions):
+   `NEON_DATABASE_URL` (connection string **diretta**, non pooled, di Neon —
+   ricorda di cambiarne lo schema in `postgresql+psycopg://` come sopra) e
+   `FOOTBALL_DATA_API_KEY`. Verificalo con un run manuale
+   (`gh workflow run scheduled-ingest.yml` o dal tab Actions) prima di
+   fidartene: deve risultare verde.
+
+## Fonti dati
+
+- [football-data.org](https://www.football-data.org/) (free tier, 10
+  richieste/minuto) — fonte primaria per Serie A e Champions League.
+- Wikipedia (pagine "20XX-YY Serie A") — fallback automatico solo per Serie A,
+  usato se l'API fallisce o esaurisce la quota per una stagione.
+- [Nominatim](https://nominatim.org/) (OpenStreetMap) — geocoding gratuito
+  della città di partenza per la pagina Trasferte.
+- [OSRM](http://project-osrm.org/) (demo server pubblico) — routing stradale
+  reale (distanza e tempo di guida) per la pagina Trasferte.
+
+## Limiti noti
+
+- **Elo semplificato**: l'Elo è calcolato su tutte le partite ingerite (Serie A
+  e Champions League complete per le stagioni scaricate), ma ogni squadra
+  parte da 1500 alla prima apparizione nella finestra di dati, con K costante,
+  senza margine di gol e senza regressione verso la media tra stagioni.
+- **Probabilità di vittoria, backtestate ma non "calibrate" in senso stretto**:
+  derivano dall'expected score Elo più un modello di pareggio a campana
+  (`features/win_probability.py`). Backtest con
+  `scripts/backtest_win_probability.py`, cross-validation leave-one-season-out
+  su 8 stagioni (2019-20 → 2026-27, 290 partite Juventus): log loss medio
+  0.9649 contro 1.0096 (baseline a frequenze) e 1.0986 (uniforme) (vedi `docs/backtest.md` per i
+  numeri completi). Margine reale ma modesto; la tabella di calibrazione
+  mostra una sottostima sistematica della probabilità di vittoria nei bucket
+  centrali-alti.
+- **Rate limit football-data.org**: 10 richieste/minuto sul piano gratuito; il
+  client applica backoff automatico.
+- **Cold start Render (piano free)**: il backend può impiegare 30-60s a
+  rispondere dopo un periodo di inattività.
+- **OpenRouter**: se la chiave non è configurata, i crediti sono esauriti o la
+  richiesta va in timeout, il Match Brief torna automaticamente al testo
+  template — l'endpoint non fallisce mai per questo motivo.
+- **Fallback Wikipedia**: non copre la Champions League (formato cambiato tra le
+  stagioni), non ha date puntuali per singola partita (usa una data
+  placeholder di inizio stagione) e non include partite future o sede
+  (stadio) — la sezione "Prossime partite" resta vuota finché non si
+  configura una vera ingestion da football-data.org. È un fallback
+  secondario, non il percorso critico.
+- **Trasferte**: le coordinate degli stadi (`app/core/stadiums.py`) sono un
+  elenco statico delle squadre già viste nel dataset — un avversario nuovo non
+  presente in elenco viene mostrato senza distanza/punteggio invece di dati
+  inventati. Il server demo pubblico di OSRM non ha SLA garantiti: se
+  irraggiungibile, la app ripiega su una stima da distanza in linea d'aria
+  corretta (marcata esplicitamente `is_estimated` in risposta e in UI), mai
+  su un tempo di guida presentato come reale quando non lo è. La finestra
+  "andata/ritorno in giornata fattibile" (parti non prima delle 4:00, rientri
+  entro le 2:00) è un giudizio ragionevole, non basata su orari treni o
+  traffico reale.
+
+## Test
+
+```bash
+cd backend
+pytest -q
+```
+
+I test di calcolo (Elo, rolling stats, Momentum Index) sono puri e non richiedono
+un database. I test API richiedono un Postgres raggiungibile: in locale creano
+automaticamente un database `<nome>_test` separato da quello di sviluppo (per non
+sovrascrivere i tuoi dati), in CI usano il servizio Postgres del workflow.
+
+### Backtest del modello di probabilità
+
+```bash
+cd backend
+python -m app.ingestion.ingest --seasons 2019-2020,2020-2021,2021-2022,2022-2023,2023-2024,2024-2025
+python scripts/backtest_win_probability.py
+```
+
+Valuta `features/win_probability.py` con metodologia da modello ML (holdout
+cronologico + cross-validation leave-one-season-out, log loss/Brier/accuracy
+contro baseline uniforme e a frequenze storiche) e riporta anche una tabella
+di calibrazione. Vedi il docstring dello script e la nota in "Limiti noti".
+
+## Licenza
+
+MIT — vedi [LICENSE](LICENSE). Progetto personale, non affiliato alla Juventus FC;
+i dati sono indicativi e provengono da fonti pubbliche.
