@@ -1,8 +1,10 @@
 name: Scheduled Ingest
 
+# Manual only: there is no hosted database at the moment. To run it on a schedule,
+# set the NEON_DATABASE_URL and FOOTBALL_DATA_API_KEY repository secrets and add:
+#   schedule:
+#     - cron: "0 2 * * *"
 on:
-  schedule:
-    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
@@ -21,6 +23,13 @@ jobs:
       DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
       FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
     steps:
+      - name: Check required secrets
+        working-directory: .
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$FOOTBALL_DATA_API_KEY" ]; then
+            echo "::error::Set the NEON_DATABASE_URL and FOOTBALL_DATA_API_KEY secrets first."
+            exit 1
+          fi
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:

@@ -7,15 +7,15 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/simonemezzabotta/Coding_Projects/juventum/scripts/scheduled_live_poll.sh</string>
+        <string>__REPO_DIR__/scripts/scheduled_live_poll.sh</string>
     </array>
     <key>StartInterval</key>
     <integer>150</integer>
     <key>RunAtLoad</key>
     <false/>
     <key>StandardOutPath</key>
-    <string>/Users/simonemezzabotta/Coding_Projects/juventum/logs/launchd.log</string>
+    <string>__REPO_DIR__/logs/launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/simonemezzabotta/Coding_Projects/juventum/logs/launchd.log</string>
+    <string>__REPO_DIR__/logs/launchd.log</string>
 </dict>
 </plist>

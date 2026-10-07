@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/simonemezzabotta/Coding_Projects/juventum/scripts/scheduled_ingest.sh</string>
+        <string>__REPO_DIR__/scripts/scheduled_ingest.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -19,8 +19,8 @@
     <key>RunAtLoad</key>
     <false/>
     <key>StandardOutPath</key>
-    <string>/Users/simonemezzabotta/Coding_Projects/juventum/logs/launchd.log</string>
+    <string>__REPO_DIR__/logs/launchd.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/simonemezzabotta/Coding_Projects/juventum/logs/launchd.log</string>
+    <string>__REPO_DIR__/logs/launchd.log</string>
 </dict>
 </plist>

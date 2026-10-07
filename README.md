@@ -44,9 +44,12 @@ Next.js dashboard  ──HTTP──▶  FastAPI backend  ──SQLAlchemy──�
   `matches` on every ingest (`backend/app/features/recompute.py`).
 - **Ingestion** (`backend/app/ingestion/ingest.py`): one CLI job,
   `python -m app.ingestion.ingest [--seasons 2023-2024,...]`. It runs
-  manually, as the `ingest` service in Docker Compose, nightly through
-  `.github/workflows/scheduled-ingest.yml`, or through a macOS `launchd`
-  job (`scripts/`). Each ingest run is logged in the `ingest_runs` table.
+  manually, as the `ingest` service in Docker Compose, on demand through
+  `.github/workflows/scheduled-ingest.yml` (needs the `NEON_DATABASE_URL`
+  and `FOOTBALL_DATA_API_KEY` secrets), or nightly through a macOS `launchd`
+  job (`scripts/`; the plist files use a `__REPO_DIR__` placeholder,
+  replaced on install with
+  `sed "s#__REPO_DIR__#$PWD#g" scripts/<file>.plist > ~/Library/LaunchAgents/<file>.plist`). Each ingest run is logged in the `ingest_runs` table.
 - **Frontend** (`frontend/`): Next.js 16 (App Router), TypeScript, Recharts,
   with Italian/English UI strings. Pages: Overview, Momentum Details,
   Matches, Match Brief, Away Trips, Predictions.
@@ -131,7 +134,7 @@ only.
 ## Backtest results
 
 The full log, including earlier iterations, is in
-[`docs/backtest.md`](docs/backtest.md) (in Italian). It was produced by
+[`docs/backtest.md`](docs/backtest.md). It was produced by
 `backend/scripts/backtest_win_probability.py`. Pre-match ratings
 (`elo_before`) are used for both teams, so a match's own result never
 reaches its prediction.

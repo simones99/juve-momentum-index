@@ -100,7 +100,10 @@ Per aggiornare i dati periodicamente: `docker compose run --build --rm ingest`.
 Su macOS c'è anche un refresh automatico giornaliero (alle 3:00, quando le
 partite del giorno sono già finite) via `launchd`:
 `scripts/scheduled_ingest.sh` + `scripts/com.juventum.scheduled-ingest.plist`
-(installato in `~/Library/LaunchAgents`). Avvia Docker Desktop e il
+(installato in `~/Library/LaunchAgents`). I plist contengono il segnaposto
+`__REPO_DIR__`; per installarli dalla radice del repository:
+`sed "s#__REPO_DIR__#$PWD#g" scripts/com.juventum.scheduled-ingest.plist > ~/Library/LaunchAgents/com.juventum.scheduled-ingest.plist`
+(stesso comando per `com.juventum.scheduled-live-poll.plist`). Avvia Docker Desktop e il
 container `db` solo se non sono già in esecuzione, e li ferma di nuovo se
 li ha avviati lui — non disturba una sessione `docker compose up` già
 attiva. Log in `logs/scheduled-ingest.log`. Per disabilitarlo:
